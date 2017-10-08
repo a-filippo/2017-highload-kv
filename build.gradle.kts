@@ -14,6 +14,8 @@ dependencies {
     // Annotations for better code documentation
     compile("com.intellij:annotations:12.0")
 
+    compile("mysql:mysql-connector-java:5.1.34")
+
     // JUnit test framework
     testCompile("junit:junit:4.12")
 

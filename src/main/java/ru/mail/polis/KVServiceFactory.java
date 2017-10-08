@@ -5,6 +5,8 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 import java.io.IOException;
 
+import ru.mail.polis.DAO.DAOStorage;
+
 /**
  * Constructs {@link KVService} instances.
  *
@@ -44,7 +46,6 @@ final class KVServiceFactory {
             throw new IllegalArgumentException("Path is not a directory: " + data);
         }
 
-        // TODO: Implement me
-        throw new UnsupportedOperationException("Implement me!");
+        return new MyService(port, new DAOStorage());
     }
 }
