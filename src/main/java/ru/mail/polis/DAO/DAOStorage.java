@@ -1,6 +1,7 @@
 package ru.mail.polis.DAO;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
@@ -8,7 +9,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.Files;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -18,26 +18,28 @@ import org.jetbrains.annotations.NotNull;
 
 public class DAOStorage implements DAO {
     private static final int MIN_VALUE_SIZE_FOR_STORAGE_IN_FILE = 65536;
-    private static final String HARD_STORAGE_PATH = "/Users/afilippo/polis/storage/";
-    private static final String DB_URL = "jdbc:mysql://localhost:8889/kv_storage?useLegacyDatetimeCode=false&serverTimezone=UTC";
-    private static final String DB_USERNAME = "root";
-    private static final String DB_PASS = "root";
+//    private static final String HARD_STORAGE_PATH = "/Users/afilippo/polis/storage/";
+    private String HARD_STORAGE_PATH;
     private static final String TABLE_STORAGE = "storage";
     private static final String COL_KEY = "storage_key";
     private static final String COL_VALUE = "storage_value";
     private static final String COL_PATH = "storage_path";
     private static final String COL_SIZE = "storage_value_size";
+    private MySQLStore mySQLStore;
 
-    @NotNull
-    private Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASS);
+    public DAOStorage(File data){
+        HARD_STORAGE_PATH = data.getAbsolutePath();
+        mySQLStore = new MySQLStore();
     }
 
     @NotNull
     @Override
     public DAOValue get(@NotNull String key) throws NoSuchElementException, IOException, IllegalArgumentException {
+        throwArgumentException(key);
+
+        Connection connection = null;
         try {
-            Connection connection = this.getConnection();
+            connection = mySQLStore.retrieve();
 
             String queryString = "select " +
                     COL_VALUE + ", " +
@@ -67,13 +69,19 @@ public class DAOStorage implements DAO {
             } else {
                 throw new NoSuchElementException();
             }
-        } catch (SQLException e){
+        } catch (SQLException e) {
             throw new IOException();
+        } catch (Exception e){
+            throw e;
+        } finally {
+            mySQLStore.putback(connection);
         }
     }
 
     @Override
     public void put(@NotNull String key, @NotNull DAOValue value) throws IOException, IllegalArgumentException {
+        throwArgumentException(key);
+
         try {
             int size = value.size();
             InputStream inputStream = value.getInputStream();
@@ -87,9 +95,7 @@ public class DAOStorage implements DAO {
             if (size < MIN_VALUE_SIZE_FOR_STORAGE_IN_FILE){
                 DBpath = "";
                 byteValue = new byte[size];
-                if (inputStream.read(byteValue) < 0){
-                    throw new IOException();
-                }
+                inputStream.read(byteValue);
             } else {
                 DBpath = key;
                 byteValue = new byte[0];
@@ -111,21 +117,31 @@ public class DAOStorage implements DAO {
      * @throws SQLException
      */
     private boolean issetKey(@NotNull String key) throws SQLException {
-        Connection connection = this.getConnection();
-        String queryString = "select " +
-                COL_KEY + " from " +
-                TABLE_STORAGE + " where " +
-                COL_KEY + " = ?";
-        PreparedStatement query = connection.prepareStatement(queryString);
-        query.setString(1, key);
-        ResultSet rs = query.executeQuery();
-        return rs.next();
+        Connection connection = null;
+        try {
+            connection = mySQLStore.retrieve();
+            String queryString = "select " +
+                    COL_KEY + " from " +
+                    TABLE_STORAGE + " where " +
+                    COL_KEY + " = ?";
+            PreparedStatement query = connection.prepareStatement(queryString);
+            query.setString(1, key);
+            ResultSet rs = query.executeQuery();
+            return rs.next();
+        } catch (Exception e){
+            throw e;
+        } finally {
+            mySQLStore.putback(connection);
+        }
     }
 
     @Override
     public void delete(@NotNull String key) throws IOException, IllegalArgumentException {
+        throwArgumentException(key);
+
+        Connection connection = null;
         try {
-            Connection connection = this.getConnection();
+            connection = mySQLStore.retrieve();
 
             String queryString = "select " +
                     COL_PATH + " from " +
@@ -142,7 +158,6 @@ public class DAOStorage implements DAO {
                     Files.delete(Paths.get(HARD_STORAGE_PATH + path));
                 }
 
-                connection = this.getConnection();
                 queryString = "DELETE FROM " +
                         TABLE_STORAGE + " WHERE " +
                         COL_KEY + " = ?";
@@ -154,6 +169,10 @@ public class DAOStorage implements DAO {
 
         } catch (SQLException e){
             throw new IOException();
+        } catch (Exception e){
+            throw e;
+        } finally {
+            mySQLStore.putback(connection);
         }
     }
 
@@ -169,29 +188,43 @@ public class DAOStorage implements DAO {
      * @throws SQLException
      */
     private void addValueToDB(@NotNull String key, @NotNull byte[] value, int size, @NotNull String path, boolean insert) throws SQLException {
-        Connection connection = this.getConnection();
-        String queryString;
-        if (insert){
-            queryString = "INSERT INTO " +
-                    TABLE_STORAGE + " set " +
-                    COL_VALUE + " = ?, " +
-                    COL_SIZE + " = ?, " +
-                    COL_PATH + " = ?, " +
-                    COL_KEY + " = ?";
-        } else {
-            queryString = "UPDATE " +
-                    TABLE_STORAGE + " set " +
-                    COL_VALUE + " = ?," +
-                    COL_SIZE + " = ?," +
-                    COL_PATH + " = ? where " +
-                    COL_KEY + " = ?";
-        }
+        Connection connection = null;
+        try {
+            connection = mySQLStore.retrieve();
+            String queryString;
+            if (insert) {
+                queryString = "INSERT INTO " +
+                        TABLE_STORAGE + " set " +
+                        COL_VALUE + " = ?, " +
+                        COL_SIZE + " = ?, " +
+                        COL_PATH + " = ?, " +
+                        COL_KEY + " = ?";
+            } else {
+                queryString = "UPDATE " +
+                        TABLE_STORAGE + " set " +
+                        COL_VALUE + " = ?," +
+                        COL_SIZE + " = ?," +
+                        COL_PATH + " = ? where " +
+                        COL_KEY + " = ?";
+            }
 
-        PreparedStatement query = connection.prepareStatement(queryString);
-        query.setBytes(1, value);
-        query.setInt(2, size);
-        query.setString(3, path);
-        query.setString(4, key);
-        query.executeUpdate();
+            PreparedStatement query = connection.prepareStatement(queryString);
+            query.setBytes(1, value);
+            query.setInt(2, size);
+            query.setString(3, path);
+            query.setString(4, key);
+            query.executeUpdate();
+        } catch (Exception e){
+            throw e;
+        } finally {
+            mySQLStore.putback(connection);
+        }
+    }
+
+    private void throwArgumentException(@NotNull String key) throws IllegalArgumentException{
+        boolean correct = (key.length() > 0);
+        if (!correct){
+            throw new IllegalArgumentException();
+        }
     }
 }

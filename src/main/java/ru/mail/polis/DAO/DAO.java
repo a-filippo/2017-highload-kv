@@ -1,7 +1,6 @@
 package ru.mail.polis.DAO;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.NoSuchElementException;
 
 import org.jetbrains.annotations.NotNull;

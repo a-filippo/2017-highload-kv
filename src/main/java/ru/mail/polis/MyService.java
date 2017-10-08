@@ -57,22 +57,35 @@ public class MyService implements KVService {
                         } catch (NoSuchElementException e){
                             httpExchange.sendResponseHeaders(404, 0);
                             httpExchange.getResponseBody().close();
+                        } catch (IllegalArgumentException e){
+                            httpExchange.sendResponseHeaders(400, 0);
+                            httpExchange.getResponseBody().close();
                         }
                         break;
 
                     case "PUT":
-                        int size = Integer.parseInt(httpExchange.getRequestHeaders().getFirst("Content-Length"));
-                        InputStream inputStream = httpExchange.getRequestBody();
-                        value = new DAOValue(inputStream, size);
-                        dao.put(id, value);
-                        httpExchange.sendResponseHeaders(201, 0);
-                        httpExchange.getResponseBody().close();
-                        break;
+                        try {
+                            int size = Integer.parseInt(httpExchange.getRequestHeaders().getFirst("Content-Length"));
+                            InputStream inputStream = httpExchange.getRequestBody();
+                            value = new DAOValue(inputStream, size);
+                            dao.put(id, value);
+                            httpExchange.sendResponseHeaders(201, 0);
+                            httpExchange.getResponseBody().close();
+                            break;
+                        } catch (IllegalArgumentException e){
+                            httpExchange.sendResponseHeaders(400, 0);
+                            httpExchange.getResponseBody().close();
+                        }
 
                     case "DELETE":
-                        dao.delete(id);
-                        httpExchange.sendResponseHeaders(202, 0);
-                        httpExchange.getResponseBody().close();
+                        try {
+                            dao.delete(id);
+                            httpExchange.sendResponseHeaders(202, 0);
+                            httpExchange.getResponseBody().close();
+                        } catch (IllegalArgumentException e){
+                            httpExchange.sendResponseHeaders(400, 0);
+                            httpExchange.getResponseBody().close();
+                        }
                 }
             });
         } catch (Exception e){

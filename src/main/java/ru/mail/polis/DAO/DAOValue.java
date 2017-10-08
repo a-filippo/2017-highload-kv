@@ -1,8 +1,6 @@
 package ru.mail.polis.DAO;
 
 import java.io.InputStream;
-import java.io.OutputStream;
-
 
 public class DAOValue {
     private InputStream inputStream;
