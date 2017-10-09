@@ -35,12 +35,11 @@ public class MyService implements KVService {
 
             this.httpServer.createContext("/v0/entity", httpExchange -> {
                 final String id = extractId(httpExchange.getRequestURI().getQuery());
-                DAOValue value;
 
                 switch (httpExchange.getRequestMethod()) {
                     case "GET":
-                        try {
-                            value = dao.get(id);
+                        try (DAOValue value = dao.get(id)){
+
                             httpExchange.sendResponseHeaders(200, value.size());
 
                             InputStream is = value.getInputStream();
@@ -51,7 +50,6 @@ public class MyService implements KVService {
                             while ((count = is.read(buffer)) >= 0) {
                                 os.write(buffer, 0, count);
                             }
-                            os.flush();
                             is.close();
                             os.close();
                         } catch (NoSuchElementException e){
@@ -64,10 +62,9 @@ public class MyService implements KVService {
                         break;
 
                     case "PUT":
-                        try {
-                            int size = Integer.parseInt(httpExchange.getRequestHeaders().getFirst("Content-Length"));
-                            InputStream inputStream = httpExchange.getRequestBody();
-                            value = new DAOValue(inputStream, size);
+                        int size = Integer.parseInt(httpExchange.getRequestHeaders().getFirst("Content-Length"));
+                        InputStream inputStream = httpExchange.getRequestBody();
+                        try (DAOValue value = new DAOValue(inputStream, size)){
                             dao.put(id, value);
                             httpExchange.sendResponseHeaders(201, 0);
                             httpExchange.getResponseBody().close();
