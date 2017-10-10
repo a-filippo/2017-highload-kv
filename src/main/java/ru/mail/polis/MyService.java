@@ -34,59 +34,66 @@ public class MyService implements KVService {
             });
 
             this.httpServer.createContext("/v0/entity", httpExchange -> {
-                final String id = extractId(httpExchange.getRequestURI().getQuery());
+                try {
+                    final String id = extractId(httpExchange.getRequestURI().getQuery());
 
-                switch (httpExchange.getRequestMethod()) {
-                    case "GET":
-                        try (DAOValue value = dao.get(id)){
+                    switch (httpExchange.getRequestMethod()) {
+                        case "GET":
+                            try (DAOValue value = dao.get(id);
+                                 OutputStream os = httpExchange.getResponseBody()) {
 
-                            httpExchange.sendResponseHeaders(200, value.size());
-
-                            InputStream is = value.getInputStream();
-                            OutputStream os = httpExchange.getResponseBody();
-
-                            final byte[] buffer = new byte[64*1024];
-                            int count;
-                            while ((count = is.read(buffer)) >= 0) {
-                                os.write(buffer, 0, count);
+                                httpExchange.sendResponseHeaders(200, value.size());
+                                final byte[] buffer = new byte[64 * 1024];
+                                int count;
+                                InputStream is = value.getInputStream();
+                                while ((count = is.read(buffer)) >= 0) {
+                                    os.write(buffer, 0, count);
+                                }
+                            } catch (NoSuchElementException e) {
+                                httpExchange.sendResponseHeaders(404, 0);
+                                httpExchange.getResponseBody().close();
+                            } catch (IllegalArgumentException e) {
+                                httpExchange.sendResponseHeaders(400, 0);
+                                httpExchange.getResponseBody().close();
                             }
-                            is.close();
-                            os.close();
-                        } catch (NoSuchElementException e){
+                            break;
+
+                        case "PUT":
+                            int size = Integer.parseInt(httpExchange.getRequestHeaders().getFirst("Content-Length"));
+
+                            try (DAOValue value = new DAOValue(httpExchange.getRequestBody(), size)) {
+                                dao.put(id, value);
+                                httpExchange.sendResponseHeaders(201, 0);
+                                httpExchange.getResponseBody().close();
+                            } catch (IllegalArgumentException e) {
+                                httpExchange.sendResponseHeaders(400, 0);
+                                httpExchange.getResponseBody().close();
+                            }
+                            break;
+
+                        case "DELETE":
+                            try {
+                                dao.delete(id);
+                                httpExchange.sendResponseHeaders(202, 0);
+                                httpExchange.getResponseBody().close();
+                            } catch (IllegalArgumentException e) {
+                                httpExchange.sendResponseHeaders(400, 0);
+                                httpExchange.getResponseBody().close();
+                            }
+                            break;
+
+                        default:
                             httpExchange.sendResponseHeaders(404, 0);
                             httpExchange.getResponseBody().close();
-                        } catch (IllegalArgumentException e){
-                            httpExchange.sendResponseHeaders(400, 0);
-                            httpExchange.getResponseBody().close();
-                        }
-                        break;
+                    }
 
-                    case "PUT":
-                        int size = Integer.parseInt(httpExchange.getRequestHeaders().getFirst("Content-Length"));
-                        InputStream inputStream = httpExchange.getRequestBody();
-                        try (DAOValue value = new DAOValue(inputStream, size)){
-                            dao.put(id, value);
-                            httpExchange.sendResponseHeaders(201, 0);
-                            httpExchange.getResponseBody().close();
-                            break;
-                        } catch (IllegalArgumentException e){
-                            httpExchange.sendResponseHeaders(400, 0);
-                            httpExchange.getResponseBody().close();
-                        }
-
-                    case "DELETE":
-                        try {
-                            dao.delete(id);
-                            httpExchange.sendResponseHeaders(202, 0);
-                            httpExchange.getResponseBody().close();
-                        } catch (IllegalArgumentException e){
-                            httpExchange.sendResponseHeaders(400, 0);
-                            httpExchange.getResponseBody().close();
-                        }
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
+
             });
         } catch (Exception e){
-            System.out.println(e.toString());
+            e.printStackTrace();
         }
     }
 

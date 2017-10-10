@@ -13,8 +13,8 @@ repositories {
 dependencies {
     // Annotations for better code documentation
     compile("com.intellij:annotations:12.0")
-
-    compile("mysql:mysql-connector-java:5.1.34")
+    
+    compile("org.apache.derby:derby:10.13.1.1")
 
     // JUnit test framework
     testCompile("junit:junit:4.12")

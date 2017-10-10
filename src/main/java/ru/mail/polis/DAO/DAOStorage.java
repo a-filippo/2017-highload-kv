@@ -15,19 +15,27 @@ import org.jetbrains.annotations.NotNull;
 
 import ru.mail.polis.DAO.DAOModel.DAOModel;
 import ru.mail.polis.DAO.DAOModel.DAOModelValue;
-import ru.mail.polis.DAO.DAOModel.MySQLDAOModel;
+import ru.mail.polis.DAO.DAOModel.DerbyDAOModel;
 
 public class DAOStorage implements DAO {
     private static final int MIN_VALUE_SIZE_FOR_STORAGE_IN_FILE = 65536;
-    private String HARD_STORAGE_PATH;
+    private String HARD_STORAGE_FOLDER = "storage/";
+    private String DB_PATH = "db";
+    private String HARD_STORAGE_FULL_PATH;
+    private String DB_FULL_PATH;
 
     private DAOModel modelValues;
 
     public DAOStorage(File data) throws IOException {
-        HARD_STORAGE_PATH = data.getAbsolutePath();
+        String path = data.getAbsolutePath();
+        HARD_STORAGE_FULL_PATH = path + File.separator + HARD_STORAGE_FOLDER;
+        Files.createDirectory(Paths.get(HARD_STORAGE_FULL_PATH));
+        DB_FULL_PATH = path + File.separator + DB_PATH;
+
         try {
-            modelValues = new MySQLDAOModel();
+            modelValues = new DerbyDAOModel(DB_FULL_PATH);
         } catch (SQLException e){
+            e.printStackTrace();
             throw new IOException();
         }
     }
@@ -47,7 +55,7 @@ public class DAOStorage implements DAO {
             if (path.equals("")){
                 inputStream = new ByteArrayInputStream(value.getValue());
             } else {
-                Path p = Paths.get(HARD_STORAGE_PATH + path);
+                Path p = Paths.get(HARD_STORAGE_FULL_PATH + path);
                 inputStream = Files.newInputStream(p);
             }
 
@@ -76,7 +84,8 @@ public class DAOStorage implements DAO {
         } else {
             DBpath = key;
             byteValue = new byte[0];
-            Files.copy(inputStream, Paths.get(HARD_STORAGE_PATH + key), StandardCopyOption.REPLACE_EXISTING);
+            Path filePath = Paths.get(HARD_STORAGE_FULL_PATH + key);
+            Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
         }
 
         DAOModelValue modelValue = new DAOModelValue(key);
@@ -96,7 +105,7 @@ public class DAOStorage implements DAO {
         if (path != null) {
 
             if (!path.equals("")) {
-                Files.delete(Paths.get(HARD_STORAGE_PATH + path));
+                Files.delete(Paths.get(HARD_STORAGE_FULL_PATH + path));
             }
 
             modelValues.deleteValue(key);
