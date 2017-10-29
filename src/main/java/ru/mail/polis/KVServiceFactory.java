@@ -6,7 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Set;
 
-import ru.mail.polis.DAO.DAOStorage;
+import ru.mail.polis.dao.DAOStorage;
 
 /**
  * Constructs {@link KVService} instances.
@@ -49,6 +49,6 @@ final class KVServiceFactory {
             throw new IllegalArgumentException("Path is not a directory: " + data);
         }
 
-        return new MyService(port, new DAOStorage(data));
+        return new MyService(port, new DAOStorage(data), topology);
     }
 }

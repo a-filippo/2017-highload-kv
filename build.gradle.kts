@@ -16,11 +16,15 @@ dependencies {
     
     compile("org.apache.derby:derby:10.13.1.1")
 
+    compile("org.apache.commons:commons-lang3:3.3")
+
+    compile("commons-io:commons-io:2.5")
+
+    compile("org.apache.httpcomponents:fluent-hc:4.5.3")
+    testCompile("org.apache.httpcomponents:fluent-hc:4.5.3")
+
     // JUnit test framework
     testCompile("junit:junit:4.12")
-
-    // HTTP client for unit tests
-    testCompile("org.apache.httpcomponents:fluent-hc:4.5.3")
 
     // Guava for tests
     testCompile("com.google.guava:guava:23.1-jre")

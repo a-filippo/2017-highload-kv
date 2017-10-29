@@ -27,7 +27,7 @@ package ru.mail.polis;
  */
 public interface KVService {
     /**
-     * Bind storage to HTTP port and start listening.
+     * Bind storage to HTTP port and execute listening.
      * <p>
      * May be called only once.
      */

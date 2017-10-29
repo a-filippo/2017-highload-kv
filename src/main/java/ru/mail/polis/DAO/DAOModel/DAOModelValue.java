@@ -1,4 +1,4 @@
-package ru.mail.polis.DAO.DAOModel;
+package ru.mail.polis.dao.daomodel;
 
 public class DAOModelValue {
     private byte[] value;

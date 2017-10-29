@@ -1,4 +1,4 @@
-package ru.mail.polis.DAO;
+package ru.mail.polis.dao;
 
 import java.io.IOException;
 import java.util.NoSuchElementException;

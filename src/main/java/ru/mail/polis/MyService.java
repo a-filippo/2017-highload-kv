@@ -2,88 +2,100 @@ package ru.mail.polis;
 
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
+
+import org.apache.commons.io.output.NullOutputStream;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
-import ru.mail.polis.DAO.DAO;
-import ru.mail.polis.DAO.DAOValue;
+import ru.mail.polis.dao.DAO;
+import ru.mail.polis.dao.DAOValue;
+import ru.mail.polis.httpclient.HttpQueryResult;
+import ru.mail.polis.httpclient.PutHttpQuery;
 
 public class MyService implements KVService {
+    public final static String CONTEXT_ENTITY = "/v0/entity";
+
     @NotNull
     private final HttpServer httpServer;
+
+//    private final int replicasCount;
+
+//    @NotNull
+//    private final ReplicaParameters defaultReplicaParameters;
+
+    @NotNull
+    private final ListOfReplicas replicasHosts;
+
+    @NotNull
+    private final String myReplicaHost;
 
     @NotNull
     private final DAO dao;
 
-    public MyService(int port, @NotNull DAO dao) throws IOException {
+    public MyService(int port, @NotNull DAO dao, Set<String> replicas) throws IOException {
         this.httpServer = HttpServer.create(new InetSocketAddress(port), 0);
         this.dao = dao;
+
+//        HttpQuery.setHttpQueryPool(new HttpQueryPool());
+
+        this.myReplicaHost = "http://localhost:" + port;
+
+//        this.replicasCount = replicas.size();
+//        this.defaultReplicaParameters = getDefaultReplicas(this.replicasCount);
+        this.replicasHosts = new ListOfReplicas(replicas);
+        this.replicasHosts.remove(this.myReplicaHost);
 
         try {
             this.httpServer.createContext("/v0/status", httpExchange -> {
                 final String response = "ONLINE";
-                httpExchange.sendResponseHeaders(200, response.length());
+                httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS, response.length());
                 httpExchange.getResponseBody().write(response.getBytes());
                 httpExchange.close();
             });
 
-            this.httpServer.createContext("/v0/entity", httpExchange -> {
+            this.httpServer.createContext(CONTEXT_ENTITY, httpExchange -> {
                 try {
-                    final String id = extractId(httpExchange.getRequestURI().getQuery());
+                    MyServiceParameters myServiceParameters = new MyServiceParameters()
+                        .setHttpExchange(httpExchange)
+                        .setDao(dao)
+                        .setMyReplicaHost(myReplicaHost)
+                        .setReplicasHosts(replicasHosts);
+
+
+//                    ServiceQueryParameters parameters = new ServiceQueryParameters(httpExchange.getRequestURI().getQuery());
+//                    final String id = parameters.getId();
+//                    ReplicaParameters replicaParameters = parameters.getReplicaParameters();
+//
+//                    ListOfReplicas fromReplicas = getFromReplicas(httpExchange);
+//                    String nextReplica = findNextReplica(fromReplicas, replicaParameters);
 
                     switch (httpExchange.getRequestMethod()) {
                         case "GET":
-                            try (DAOValue value = dao.get(id);
-                                 OutputStream os = httpExchange.getResponseBody()) {
-
-                                httpExchange.sendResponseHeaders(200, value.size());
-                                final byte[] buffer = new byte[64 * 1024];
-                                int count;
-                                InputStream is = value.getInputStream();
-                                while ((count = is.read(buffer)) >= 0) {
-                                    os.write(buffer, 0, count);
-                                }
-                            } catch (NoSuchElementException e) {
-                                httpExchange.sendResponseHeaders(404, 0);
-                                httpExchange.getResponseBody().close();
-                            } catch (IllegalArgumentException e) {
-                                httpExchange.sendResponseHeaders(400, 0);
-                                httpExchange.getResponseBody().close();
-                            }
+                            MyServiceEntityGet myServiceEntityGet = new MyServiceEntityGet(myServiceParameters);
+                            myServiceEntityGet.execute();
                             break;
 
                         case "PUT":
-                            int size = Integer.parseInt(httpExchange.getRequestHeaders().getFirst("Content-Length"));
-
-                            try (DAOValue value = new DAOValue(httpExchange.getRequestBody(), size)) {
-                                dao.put(id, value);
-                                httpExchange.sendResponseHeaders(201, 0);
-                                httpExchange.getResponseBody().close();
-                            } catch (IllegalArgumentException e) {
-                                httpExchange.sendResponseHeaders(400, 0);
-                                httpExchange.getResponseBody().close();
-                            }
+                            MyServiceEntityPut myServiceEntityPut = new MyServiceEntityPut(myServiceParameters);
+                            myServiceEntityPut.execute();
                             break;
 
                         case "DELETE":
-                            try {
-                                dao.delete(id);
-                                httpExchange.sendResponseHeaders(202, 0);
-                                httpExchange.getResponseBody().close();
-                            } catch (IllegalArgumentException e) {
-                                httpExchange.sendResponseHeaders(400, 0);
-                                httpExchange.getResponseBody().close();
-                            }
+                            MyServiceEntityDelete myServiceEntityDelete = new MyServiceEntityDelete(myServiceParameters);
+                            myServiceEntityDelete.execute();
                             break;
 
                         default:
-                            httpExchange.sendResponseHeaders(404, 0);
+                            httpExchange.sendResponseHeaders(HttpHelpers.STATUS_NOT_FOUND, 0);
                             httpExchange.getResponseBody().close();
                     }
 
@@ -108,11 +120,24 @@ public class MyService implements KVService {
     }
 
     @NotNull
-    private static String extractId(@NotNull String query){
-        if (!query.startsWith("id=")){
-            throw new IllegalArgumentException();
-        }
+    private ListOfReplicas getFromReplicas(@NotNull HttpExchange httpExchange){
+        String fromStorage = httpExchange.getRequestHeaders().getFirst(HttpHelpers.HEADER_FROM_REPLICAS);
+        return new ListOfReplicas(fromStorage);
+    }
 
-        return query.substring(3);
+    @Nullable
+    private String findNextReplica(ListOfReplicas fromReplicas, ReplicaParameters parameters){
+        if (fromReplicas.size() < parameters.from() - 1){
+            for (String replicaHost : replicasHosts){
+                if (!fromReplicas.contains(replicaHost)){
+                    return replicaHost;
+                }
+            }
+        }
+        return null;
+    }
+
+    private ReplicaParameters getDefaultReplicas(int clusterSize){
+        return new ReplicaParameters(clusterSize / 2 + 1, clusterSize);
     }
 }

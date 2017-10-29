@@ -8,6 +8,7 @@ import java.nio.file.FileVisitResult;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Random;
 
 /**
  * Utility classes for handling files
@@ -16,13 +17,15 @@ import java.nio.file.attribute.BasicFileAttributes;
  */
 final class Files {
     private static final String TEMP_PREFIX = "highload-kv";
+    private static final Random RANDOM = new Random();
 
     private Files() {
         // Don't instantiate
     }
 
     static File createTempDirectory() throws IOException {
-        final File data = java.nio.file.Files.createTempDirectory(TEMP_PREFIX).toFile();
+        String tempDirectoryName = TEMP_PREFIX + "-" + RANDOM.nextInt(Integer.MAX_VALUE);
+        final File data = java.nio.file.Files.createTempDirectory(tempDirectoryName).toFile();
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 if (data.exists()) {

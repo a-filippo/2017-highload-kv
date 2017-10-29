@@ -1,9 +1,11 @@
-package ru.mail.polis.DAO;
+package ru.mail.polis.dao;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -11,15 +13,15 @@ import java.nio.file.Files;
 import java.sql.SQLException;
 import java.util.NoSuchElementException;
 
+import org.apache.commons.io.input.TeeInputStream;
 import org.jetbrains.annotations.NotNull;
 
-import ru.mail.polis.DAO.DAOModel.DAOModel;
-import ru.mail.polis.DAO.DAOModel.DAOModelValue;
-import ru.mail.polis.DAO.DAOModel.DerbyDAOModel;
+import ru.mail.polis.dao.daomodel.DAOModel;
+import ru.mail.polis.dao.daomodel.DAOModelValue;
+import ru.mail.polis.dao.daomodel.DerbyDAOModel;
 
 public class DAOStorage implements DAO {
-    private static final int MIN_VALUE_SIZE_FOR_STORAGE_IN_FILE = 65536;
-    private String HARD_STORAGE_FOLDER = "storage/";
+    private String HARD_STORAGE_FOLDER = "storage";
     private String DB_PATH = "db";
     private String HARD_STORAGE_FULL_PATH;
     private String DB_FULL_PATH;
@@ -28,7 +30,7 @@ public class DAOStorage implements DAO {
 
     public DAOStorage(File data) throws IOException {
         String path = data.getAbsolutePath();
-        HARD_STORAGE_FULL_PATH = path + File.separator + HARD_STORAGE_FOLDER;
+        HARD_STORAGE_FULL_PATH = path + File.separator + HARD_STORAGE_FOLDER + File.separator;
         Files.createDirectory(Paths.get(HARD_STORAGE_FULL_PATH));
         DB_FULL_PATH = path + File.separator + DB_PATH;
 
@@ -77,15 +79,22 @@ public class DAOStorage implements DAO {
         String DBpath;
         byte[] byteValue;
 
-        if (size < MIN_VALUE_SIZE_FOR_STORAGE_IN_FILE){
+        if (size < DAOValue.MIN_VALUE_SIZE_FOR_STORAGE_IN_FILE){
             DBpath = "";
             byteValue = new byte[size];
             inputStream.read(byteValue);
+            value.setProxedInputStream(new ByteArrayInputStream(byteValue));
+
         } else {
             DBpath = key;
             byteValue = new byte[0];
-            Path filePath = Paths.get(HARD_STORAGE_FULL_PATH + key);
-            Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
+//            Path filePath = Paths.get(HARD_STORAGE_FULL_PATH + key);
+            value.setProxedInputStream(
+                new TeeInputStream(inputStream, new FileOutputStream(HARD_STORAGE_FULL_PATH + key))
+            );
+//            value.setOutputStream(new FileOutputStream(HARD_STORAGE_FULL_PATH + key));
+//            InputStream proxedInputStream = new TeeInputStream(inputStream, fileOutputStream);
+//            Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
         }
 
         DAOModelValue modelValue = new DAOModelValue(key);
