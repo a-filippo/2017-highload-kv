@@ -18,6 +18,7 @@ public class DerbyDAOModel implements DAOModel {
     private static final String COL_KEY = "storage_key";
     private static final String COL_VALUE = "storage_value";
     private static final String COL_PATH = "storage_path";
+    private static final String COL_TIMESTAMP = "storage_timestamp";
     private static final String COL_SIZE = "storage_value_size";
 
     private PreparedStatementStore GetRowPreparedStatementStore;
@@ -48,6 +49,7 @@ public class DerbyDAOModel implements DAOModel {
                 COL_KEY+" VARCHAR (256) NOT NULL, " +
                 COL_VALUE+" blob (65536), " +
                 COL_PATH+" VARCHAR (256) NOT NULL, " +
+                COL_TIMESTAMP+" BIGINT NOT NULL, " +
                 COL_SIZE+" int NOT NULL" +
                 ")"
             );
@@ -72,6 +74,7 @@ public class DerbyDAOModel implements DAOModel {
                 value.setSize(rs.getInt(COL_SIZE));
                 value.setPath(rs.getString(COL_PATH));
                 value.setValue(rs.getBytes(COL_VALUE));
+                value.setTimestamp(rs.getLong(COL_TIMESTAMP));
 
                 rs.close();
                 return value;
@@ -107,8 +110,9 @@ public class DerbyDAOModel implements DAOModel {
             PreparedStatement preparedStatement = preparedStatementStore.getStatement();
             preparedStatement.setBytes(1, value.getValue());
             preparedStatement.setInt(2, value.getSize());
-            preparedStatement.setString(3, value.getPath());
-            preparedStatement.setString(4, value.getKey());
+            preparedStatement.setLong(3, value.getTimestamp());
+            preparedStatement.setString(4, value.getPath());
+            preparedStatement.setString(5, value.getKey());
             preparedStatement.executeUpdate();
         } catch (SQLException e){
             e.printStackTrace();
@@ -132,6 +136,7 @@ public class DerbyDAOModel implements DAOModel {
         GetRowPreparedStatementStore = new PreparedStatementStore(
             "SELECT " +
             COL_VALUE + ", " +
+            COL_TIMESTAMP + ", " +
             COL_SIZE + ", " +
             COL_PATH + " from " +
             TABLE_STORAGE + " where " +
@@ -143,6 +148,7 @@ public class DerbyDAOModel implements DAOModel {
             TABLE_STORAGE + " SET " +
             COL_VALUE + " = ?," +
             COL_SIZE + " = ?," +
+            COL_TIMESTAMP + " = ?," +
             COL_PATH + " = ? WHERE " +
             COL_KEY + " = ?"
         );
@@ -159,6 +165,7 @@ public class DerbyDAOModel implements DAOModel {
             TABLE_STORAGE + " (" +
             COL_VALUE + ", " +
             COL_SIZE + ", " +
+            COL_TIMESTAMP + ", " +
             COL_PATH + ", " +
             COL_KEY + ") values (?, ?, ?, ?)"
         );

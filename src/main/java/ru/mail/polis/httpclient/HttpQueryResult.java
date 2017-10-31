@@ -12,13 +12,11 @@ import ru.mail.polis.ListOfReplicas;
 public class HttpQueryResult {
     private Response response;
     private HttpResponse httpResponse;
-    private InputStream inputStreamResponse;
 
     HttpQueryResult(Response response) throws IOException {
         this.response = response;
 
         this.httpResponse = response.returnResponse();
-//        this.inputStreamResponse = response.returnContent().asStream();
     }
 
     public int getStatusCode(){
@@ -28,5 +26,13 @@ public class HttpQueryResult {
     public ListOfReplicas getListOfSuccessReplicas(){
         String fromStorageString = httpResponse.getFirstHeader(HttpHelpers.HEADER_FROM_REPLICAS).getValue();
         return new ListOfReplicas(fromStorageString);
+    }
+
+    public InputStream getInputStream() throws IOException {
+        return response.returnContent().asStream();
+    }
+
+    public String getHash(){
+        return httpResponse.getFirstHeader(HttpHelpers.HEADER_HASH_OF_VALUE).getValue();
     }
 }

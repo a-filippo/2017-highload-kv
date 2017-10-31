@@ -5,6 +5,7 @@ public class DAOModelValue {
     private int size;
     private String path;
     private String key;
+    private long timestamp;
 
     public DAOModelValue(String key){
         this.key = key;
@@ -40,5 +41,13 @@ public class DAOModelValue {
 
     public void setKey(String key) {
         this.key = key;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
     }
 }

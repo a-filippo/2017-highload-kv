@@ -1,6 +1,11 @@
 package ru.mail.polis;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 import org.apache.http.protocol.HTTP;
 import org.jetbrains.annotations.NotNull;
@@ -52,7 +57,7 @@ abstract public class MyServiceEntityAction {
 
         this.fromReplicas = getFromReplicas(httpExchange);
 
-        this.nextReplica = findNextReplica();
+        this.nextReplica = findNextReplica(id);
     }
 
     public abstract void execute() throws IOException;
@@ -64,15 +69,30 @@ abstract public class MyServiceEntityAction {
     }
 
     @Nullable
-    private String findNextReplica(){
+    private String findNextReplica(String key){
         if (fromReplicas.size() < replicaParameters.from() - 1){
-            for (String replicaHost : replicasHosts){
-                if (!fromReplicas.contains(replicaHost)){
-                    return replicaHost;
-                }
-            }
+//            for (String replicaHost : replicasHosts){
+//                if (!fromReplicas.contains(replicaHost)){
+//                    return replicaHost;
+//                }
+//            }
+            int hash = key.hashCode();
+            List<String> listOfReplicas = Arrays.asList(replicasHosts.toArray());
+            listOfReplicas.sort(Comparator.comparingInt(string -> string.hashCode() ^ hash));
+            return listOfReplicas.get(0);
         }
         return null;
+    }
+
+    protected List<String> findReplicas(String key){
+        ListOfReplicas allReplicas = new ListOfReplicas(replicasHosts);
+        allReplicas.add(myReplicaHost);
+        List<String> listOfAllReplicas = Arrays.asList(allReplicas.toArray());
+
+        int hash = key.hashCode();
+        listOfAllReplicas.sort(Comparator.comparingInt(string -> string.hashCode() ^ hash));
+
+        return listOfAllReplicas;
     }
 
     protected int getSize(){

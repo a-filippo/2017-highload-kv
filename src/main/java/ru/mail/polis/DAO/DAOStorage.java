@@ -2,6 +2,7 @@ package ru.mail.polis.dao;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -10,12 +11,15 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.Files;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.NoSuchElementException;
 
 import org.apache.commons.io.input.TeeInputStream;
 import org.jetbrains.annotations.NotNull;
 
+import ru.mail.polis.SHA1;
 import ru.mail.polis.dao.daomodel.DAOModel;
 import ru.mail.polis.dao.daomodel.DAOModelValue;
 import ru.mail.polis.dao.daomodel.DerbyDAOModel;
@@ -54,12 +58,19 @@ public class DAOStorage implements DAO {
             String path = value.getPath();
             InputStream inputStream;
 
+            DAOValue.HashCalculating hashCalculating;
+
             if (path.equals("")){
                 inputStream = new ByteArrayInputStream(value.getValue());
+                hashCalculating = () -> SHA1.calculateHash(value.getValue());
             } else {
-                Path p = Paths.get(HARD_STORAGE_FULL_PATH + path);
-                inputStream = Files.newInputStream(p);
+                File file = new File(HARD_STORAGE_FULL_PATH + path);
+                inputStream = new FileInputStream(file);
+                hashCalculating = () -> SHA1.calculateHash(file);
             }
+
+            DAOValue daoValue = new DAOValue(inputStream, size);
+            daoValue.addHashCalculating(hashCalculating);
 
             return new DAOValue(inputStream, size);
         } else {

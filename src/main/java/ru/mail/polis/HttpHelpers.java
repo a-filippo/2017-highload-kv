@@ -11,4 +11,5 @@ public class HttpHelpers {
     public static final int STATUS_INTERNAL_ERROR = 500;
 
     public static final String HEADER_FROM_REPLICAS = "From-Storage";
+    public static final String HEADER_HASH_OF_VALUE = "Hash-Of-Value";
 }

@@ -56,6 +56,10 @@ public class ListOfReplicas implements Iterable<String>{
         return replicas.isEmpty();
     }
 
+    public String[] toArray(){
+        return replicas.toArray(new String[replicas.size()]);
+    }
+
     public boolean contains(String value){
         return replicas.contains(value);
     }

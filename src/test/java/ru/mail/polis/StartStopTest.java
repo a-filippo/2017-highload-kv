@@ -56,7 +56,7 @@ public class StartStopTest extends TestBase {
     public void create() throws Exception {
         storage = KVServiceFactory.create(port, data, endpoints);
         try {
-            // Should not respond before start
+            // Should not respond before execute
             status();
         } catch (SocketTimeoutException e) {
             // Do nothing

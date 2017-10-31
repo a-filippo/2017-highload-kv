@@ -5,6 +5,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.security.NoSuchAlgorithmException;
 
 import org.apache.commons.io.input.TeeInputStream;
 import org.jetbrains.annotations.NotNull;
@@ -24,8 +25,10 @@ public class DAOValue implements Closeable {
     @Nullable
     private OutputStream outputStream;
 
-
     private int size;
+
+    @Nullable
+    private HashCalculating hashCalculating;
 
     public DAOValue(@NotNull InputStream inputStream, int size){
         this.inputStream = inputStream;
@@ -48,6 +51,19 @@ public class DAOValue implements Closeable {
         }
     }
 
+    public String getHash() throws IOException {
+        try {
+            return hashCalculating.calculate();
+        } catch (NoSuchAlgorithmException e){
+            e.printStackTrace();
+            throw new IOException();
+        }
+    }
+
+    void addHashCalculating(HashCalculating hashCalculating){
+        this.hashCalculating = hashCalculating;
+    }
+
     void setOutputStream(@NotNull OutputStream outputStream) {
         this.outputStream = outputStream;
     }
@@ -67,5 +83,9 @@ public class DAOValue implements Closeable {
 
     void setProxedInputStream(@NotNull InputStream proxedInputStream){
         this.proxedInputStream = proxedInputStream;
+    }
+
+    interface HashCalculating{
+        String calculate() throws NoSuchAlgorithmException;
     }
 }
