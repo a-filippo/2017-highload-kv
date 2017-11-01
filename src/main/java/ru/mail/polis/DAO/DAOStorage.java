@@ -15,6 +15,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.io.input.TeeInputStream;
 import org.jetbrains.annotations.NotNull;
@@ -36,7 +37,7 @@ public class DAOStorage implements DAO {
         String path = data.getAbsolutePath();
         HARD_STORAGE_FULL_PATH = path + File.separator + HARD_STORAGE_FOLDER + File.separator;
         Files.createDirectory(Paths.get(HARD_STORAGE_FULL_PATH));
-        DB_FULL_PATH = path + File.separator + DB_PATH;
+        DB_FULL_PATH = path + File.separator + DB_PATH + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE);
 
         try {
             modelValues = new DerbyDAOModel(DB_FULL_PATH);

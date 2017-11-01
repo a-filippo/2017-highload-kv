@@ -16,7 +16,7 @@ import ru.mail.polis.httpclient.PutHttpQuery;
 
 public class MyServiceEntityPut extends MyServiceEntityAction {
 
-    public MyServiceEntityPut(@NotNull MyServiceParameters myServiceParameters) throws NoSuchReplicasException {
+    public MyServiceEntityPut(@NotNull MyServiceParameters myServiceParameters) throws NoSuchReplicasException, IllegalIdException {
         super(myServiceParameters);
     }
 
@@ -33,7 +33,7 @@ public class MyServiceEntityPut extends MyServiceEntityAction {
         try (DAOValue value = new DAOValue(httpExchange.getRequestBody(), size, timestamp)) {
 
             dao.put(id, value);
-            ListOfReplicas listOfSuccessReplicasPut = new ListOfReplicas();;
+            ListOfReplicas listOfSuccessReplicasPut = new ListOfReplicas();
 
             if (nextReplica != null){
                 HttpQuery putHttpQuery;
@@ -57,6 +57,8 @@ public class MyServiceEntityPut extends MyServiceEntityAction {
                 } catch (Exception e){
                     e.printStackTrace();
                     httpExchange.sendResponseHeaders(HttpHelpers.STATUS_INTERNAL_ERROR, 0);
+                    httpExchange.getResponseBody().close();
+                    return;
                 }
             } else {
                 IOHelpers.copy(value.getProxedInputStream(), new NullOutputStream());

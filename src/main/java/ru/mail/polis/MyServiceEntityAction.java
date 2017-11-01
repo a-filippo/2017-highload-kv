@@ -43,7 +43,7 @@ abstract public class MyServiceEntityAction {
     @Nullable
     protected final String nextReplica;
 
-    public MyServiceEntityAction(@NotNull MyServiceParameters myServiceParameters) throws NoSuchReplicasException {
+    public MyServiceEntityAction(@NotNull MyServiceParameters myServiceParameters) throws NoSuchReplicasException, IllegalIdException {
         this.myServiceParameters = myServiceParameters;
 
         this.dao = myServiceParameters.getDao();
@@ -77,7 +77,9 @@ abstract public class MyServiceEntityAction {
 //                }
 //            }
             int hash = key.hashCode();
-            List<String> listOfReplicas = Arrays.asList(replicasHosts.toArray());
+            ListOfReplicas listOfNextReplicas = new ListOfReplicas(replicasHosts);
+            listOfNextReplicas.exclude(fromReplicas);
+            List<String> listOfReplicas = Arrays.asList(listOfNextReplicas.toArray());
             listOfReplicas.sort(Comparator.comparingInt(string -> string.hashCode() ^ hash));
             return listOfReplicas.get(0);
         }

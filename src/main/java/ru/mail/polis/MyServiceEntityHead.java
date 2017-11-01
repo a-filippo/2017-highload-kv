@@ -19,7 +19,7 @@ import ru.mail.polis.httpclient.HttpQueryResult;
 
 public class MyServiceEntityHead extends MyServiceEntityAction {
 
-    public MyServiceEntityHead(@NotNull MyServiceParameters myServiceParameters) throws NoSuchReplicasException {
+    public MyServiceEntityHead(@NotNull MyServiceParameters myServiceParameters) throws NoSuchReplicasException, IllegalIdException {
         super(myServiceParameters);
     }
 
@@ -32,6 +32,7 @@ public class MyServiceEntityHead extends MyServiceEntityAction {
             headers.add(HttpHelpers.HEADER_SIZE, String.valueOf(value.size()));
 
             httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_HEAD, -1);
+//            httpExchange.getResponseBody().
 //            httpExchange.getResponseBody().close();
 
         } catch (NoSuchElementException e) {

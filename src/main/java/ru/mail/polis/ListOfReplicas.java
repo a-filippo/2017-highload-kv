@@ -27,7 +27,7 @@ public class ListOfReplicas implements Iterable<String>{
         if (line == null){
             this.replicas = new HashSet<>();
         } else {
-            this.replicas = new HashSet<>(Arrays.asList(line.split("/,/")));
+            this.replicas = new HashSet<>(Arrays.asList(line.split(",")));
         }
     }
 
@@ -50,6 +50,10 @@ public class ListOfReplicas implements Iterable<String>{
 
     public int size(){
         return replicas.size();
+    }
+
+    public void exclude(ListOfReplicas otherList){
+        replicas.removeAll(otherList.replicas);
     }
 
     public boolean empty(){

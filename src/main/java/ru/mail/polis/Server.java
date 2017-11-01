@@ -15,8 +15,8 @@ import javax.sound.sampled.Port;
  * @author Vadim Tsesko <mail@incubos.org>
  */
 public final class Server {
-//    private static final int[] PORTS = {8080, 8081, 8082, 8083};
-    private static final int[] PORTS = {8080};
+    private static final int[] PORTS = {8080, 8081, 8082, 8083};
+//    private static final int[] PORTS = {8080};
 
     private Server() {
         // Not instantiable

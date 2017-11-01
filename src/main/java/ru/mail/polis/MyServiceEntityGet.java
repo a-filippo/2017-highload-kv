@@ -20,7 +20,7 @@ import ru.mail.polis.httpclient.PutHttpQuery;
 
 public class MyServiceEntityGet extends MyServiceEntityAction{
 
-    public MyServiceEntityGet(@NotNull MyServiceParameters myServiceParameters) throws NoSuchReplicasException {
+    public MyServiceEntityGet(@NotNull MyServiceParameters myServiceParameters) throws NoSuchReplicasException, IllegalIdException {
         super(myServiceParameters);
     }
 
@@ -61,6 +61,7 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
                     } catch (IllegalArgumentException e) {
                         httpExchange.sendResponseHeaders(HttpHelpers.STATUS_BAD_ARGUMENT, 0);
                         httpExchange.getResponseBody().close();
+                        return;
                     } catch (NoSuchElementException e){
 
                     }
@@ -110,11 +111,15 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
             ListOfReplicas replicasWithNeedingValue = infoOfReplicasByTimestamp.get(timestampOfMaxCount);
 
 
-            if (replicasWithNeedingValue.size() >= replicaParameters.ack()) {
+            if (replicasWithNeedingValue == null){
+                httpExchange.sendResponseHeaders(HttpHelpers.STATUS_NOT_FOUND, 0);
+                httpExchange.getResponseBody().close();
+            } else if (replicasWithNeedingValue.size() >= replicaParameters.ack()) {
                 if (replicasWithNeedingValue.contains(myReplicaHost)) {
                     try (DAOValue daoValue = dao.get(id)) {
                         httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_GET, daoValue.size());
                         IOHelpers.copy(daoValue.getInputStream(), httpExchange.getResponseBody());
+                        httpExchange.getResponseBody().close();
                     } catch (IllegalArgumentException e) {
                         httpExchange.sendResponseHeaders(HttpHelpers.STATUS_BAD_ARGUMENT, 0);
                         httpExchange.getResponseBody().close();
@@ -132,6 +137,7 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
                         HttpQueryResult getValueResult = getHttpQuery.execute();
                         httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_GET, 0);
                         IOHelpers.copy(getValueResult.getInputStream(), httpExchange.getResponseBody());
+                        httpExchange.getResponseBody().close();
 
                     } catch (URISyntaxException e) {
                         e.printStackTrace();
@@ -149,6 +155,7 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
 
                 httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_GET, 0);
                 IOHelpers.copy(value.getInputStream(), httpExchange.getResponseBody());
+                httpExchange.getResponseBody().close();
             } catch (NoSuchElementException e) {
                 httpExchange.sendResponseHeaders(HttpHelpers.STATUS_NOT_FOUND, 0);
                 httpExchange.getResponseBody().close();

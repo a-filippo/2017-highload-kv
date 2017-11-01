@@ -77,7 +77,7 @@ public class MyService implements KVService {
 //
 //                    ListOfReplicas fromReplicas = getFromReplicas(httpExchange);
 //                    String nextReplica = findNextReplica(fromReplicas, replicaParameters);
-
+//                    System.out.println(httpExchange.getRequestHeaders().values().toString());
                     switch (httpExchange.getRequestMethod()) {
                         case "GET":
                             MyServiceEntityGet myServiceEntityGet = new MyServiceEntityGet(myServiceParameters);
@@ -95,6 +95,7 @@ public class MyService implements KVService {
                             break;
 
                         case "HEAD":
+                            System.out.println(httpExchange.getRequestHeaders().values().toString());
                             MyServiceEntityHead myServiceEntityHead = new MyServiceEntityHead(myServiceParameters);
                             myServiceEntityHead.execute();
                             break;
@@ -103,6 +104,9 @@ public class MyService implements KVService {
                             httpExchange.sendResponseHeaders(HttpHelpers.STATUS_NOT_FOUND, 0);
                             httpExchange.getResponseBody().close();
                     }
+                } catch (IllegalIdException e){
+                    httpExchange.sendResponseHeaders(HttpHelpers.STATUS_BAD_ARGUMENT, 0);
+                    httpExchange.getResponseBody().close();
                 } catch (NoSuchReplicasException e){
                     httpExchange.sendResponseHeaders(HttpHelpers.STATUS_NOT_ENOUGH_REPLICAS, 0);
                     httpExchange.getResponseBody().close();

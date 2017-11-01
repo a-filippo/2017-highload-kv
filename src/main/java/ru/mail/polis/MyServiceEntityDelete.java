@@ -5,7 +5,7 @@ import java.io.IOException;
 import org.jetbrains.annotations.NotNull;
 
 public class MyServiceEntityDelete extends MyServiceEntityAction {
-    public MyServiceEntityDelete(@NotNull MyServiceParameters myServiceParameters) throws NoSuchReplicasException {
+    public MyServiceEntityDelete(@NotNull MyServiceParameters myServiceParameters) throws NoSuchReplicasException, IllegalIdException {
         super(myServiceParameters);
     }
 
