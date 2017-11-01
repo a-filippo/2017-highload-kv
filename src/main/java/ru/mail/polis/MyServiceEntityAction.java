@@ -43,7 +43,7 @@ abstract public class MyServiceEntityAction {
     @Nullable
     protected final String nextReplica;
 
-    public MyServiceEntityAction(@NotNull MyServiceParameters myServiceParameters) {
+    public MyServiceEntityAction(@NotNull MyServiceParameters myServiceParameters) throws NoSuchReplicasException {
         this.myServiceParameters = myServiceParameters;
 
         this.dao = myServiceParameters.getDao();
@@ -52,7 +52,7 @@ abstract public class MyServiceEntityAction {
         this.replicasHosts = myServiceParameters.getReplicasHosts();
 
         ServiceQueryParameters serviceQueryParameters = new ServiceQueryParameters(httpExchange.getRequestURI().getQuery());
-        this.replicaParameters = serviceQueryParameters.getReplicaParameters(replicasHosts.size());
+        this.replicaParameters = serviceQueryParameters.getReplicaParameters(replicasHosts.size() + 1);
         this.id = serviceQueryParameters.getId();
 
         this.fromReplicas = getFromReplicas(httpExchange);
@@ -82,6 +82,11 @@ abstract public class MyServiceEntityAction {
             return listOfReplicas.get(0);
         }
         return null;
+    }
+
+    protected long getTimestamp(){
+        String timestampString = httpExchange.getRequestHeaders().getFirst(HttpHelpers.HEADER_TIMESTAMP);
+        return timestampString == null ? -1 : Long.valueOf(timestampString);
     }
 
     protected List<String> findReplicas(String key){

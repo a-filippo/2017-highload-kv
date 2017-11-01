@@ -167,7 +167,7 @@ public class DerbyDAOModel implements DAOModel {
             COL_SIZE + ", " +
             COL_TIMESTAMP + ", " +
             COL_PATH + ", " +
-            COL_KEY + ") values (?, ?, ?, ?)"
+            COL_KEY + ") values (?, ?, ?, ?, ?)"
         );
 
         DeleteRowPreparedStatementStore = new PreparedStatementStore(

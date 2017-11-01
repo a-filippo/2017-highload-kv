@@ -3,6 +3,7 @@ package ru.mail.polis.httpclient;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.fluent.Response;
 
@@ -32,7 +33,12 @@ public class HttpQueryResult {
         return response.returnContent().asStream();
     }
 
-    public String getHash(){
-        return httpResponse.getFirstHeader(HttpHelpers.HEADER_HASH_OF_VALUE).getValue();
+//    public String getHash(){
+//        return httpResponse.getFirstHeader(HttpHelpers.HEADER_HASH_OF_VALUE).getValue();
+//    }
+
+    public long getTimestamp(){
+        Header timestampHeader = httpResponse.getFirstHeader(HttpHelpers.HEADER_TIMESTAMP);
+        return timestampHeader == null ? -1 : Long.valueOf(timestampHeader.getValue());
     }
 }

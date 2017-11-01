@@ -54,25 +54,25 @@ public class DAOStorage implements DAO {
         DAOModelValue value = modelValues.getValue(key);
 
         if (value != null){
-            int size = value.getSize();
+//            int size = value.getSize();
             String path = value.getPath();
             InputStream inputStream;
 
-            DAOValue.HashCalculating hashCalculating;
+//            DAOValue.HashCalculating hashCalculating;
 
             if (path.equals("")){
                 inputStream = new ByteArrayInputStream(value.getValue());
-                hashCalculating = () -> SHA1.calculateHash(value.getValue());
+//                hashCalculating = () -> SHA1.calculateHash(value.getValue());
             } else {
                 File file = new File(HARD_STORAGE_FULL_PATH + path);
                 inputStream = new FileInputStream(file);
-                hashCalculating = () -> SHA1.calculateHash(file);
+//                hashCalculating = () -> SHA1.calculateHash(file);
             }
 
-            DAOValue daoValue = new DAOValue(inputStream, size);
-            daoValue.addHashCalculating(hashCalculating);
+//            DAOValue daoValue = new DAOValue(inputStream, size);
+//            daoValue.addHashCalculating(hashCalculating);
 
-            return new DAOValue(inputStream, size);
+            return new DAOValue(inputStream, value.getSize(), value.getTimestamp());
         } else {
             throw new NoSuchElementException();
         }
@@ -111,6 +111,7 @@ public class DAOStorage implements DAO {
         DAOModelValue modelValue = new DAOModelValue(key);
         modelValue.setSize(size);
         modelValue.setPath(DBpath);
+        modelValue.setTimestamp(value.timestamp());
         modelValue.setValue(byteValue);
 
         modelValues.putValue(modelValue, issetKey);

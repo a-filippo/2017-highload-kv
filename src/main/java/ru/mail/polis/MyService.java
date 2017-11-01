@@ -65,10 +65,10 @@ public class MyService implements KVService {
             this.httpServer.createContext(CONTEXT_ENTITY, httpExchange -> {
                 try {
                     MyServiceParameters myServiceParameters = new MyServiceParameters()
-                        .setHttpExchange(httpExchange)
-                        .setDao(dao)
-                        .setMyReplicaHost(myReplicaHost)
-                        .setReplicasHosts(replicasHosts);
+                            .setHttpExchange(httpExchange)
+                            .setDao(dao)
+                            .setMyReplicaHost(myReplicaHost)
+                            .setReplicasHosts(replicasHosts);
 
 
 //                    ServiceQueryParameters parameters = new ServiceQueryParameters(httpExchange.getRequestURI().getQuery());
@@ -94,11 +94,18 @@ public class MyService implements KVService {
                             myServiceEntityDelete.execute();
                             break;
 
+                        case "HEAD":
+                            MyServiceEntityHead myServiceEntityHead = new MyServiceEntityHead(myServiceParameters);
+                            myServiceEntityHead.execute();
+                            break;
+
                         default:
                             httpExchange.sendResponseHeaders(HttpHelpers.STATUS_NOT_FOUND, 0);
                             httpExchange.getResponseBody().close();
                     }
-
+                } catch (NoSuchReplicasException e){
+                    httpExchange.sendResponseHeaders(HttpHelpers.STATUS_NOT_ENOUGH_REPLICAS, 0);
+                    httpExchange.getResponseBody().close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

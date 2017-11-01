@@ -27,16 +27,23 @@ public class DAOValue implements Closeable {
 
     private int size;
 
-    @Nullable
-    private HashCalculating hashCalculating;
+    private long timestamp;
 
-    public DAOValue(@NotNull InputStream inputStream, int size){
+//    @Nullable
+//    private HashCalculating hashCalculating;
+
+    public DAOValue(@NotNull InputStream inputStream, int size, long timestamp){
         this.inputStream = inputStream;
         this.size = size;
+        this.timestamp = timestamp;
     }
 
     public int size(){
         return this.size;
+    }
+
+    public long timestamp() {
+        return timestamp;
     }
 
     public @NotNull InputStream getInputStream() {
@@ -51,18 +58,18 @@ public class DAOValue implements Closeable {
         }
     }
 
-    public String getHash() throws IOException {
-        try {
-            return hashCalculating.calculate();
-        } catch (NoSuchAlgorithmException e){
-            e.printStackTrace();
-            throw new IOException();
-        }
-    }
-
-    void addHashCalculating(HashCalculating hashCalculating){
-        this.hashCalculating = hashCalculating;
-    }
+//    public String getHash() throws IOException {
+//        try {
+//            return hashCalculating.calculate();
+//        } catch (NoSuchAlgorithmException e){
+//            e.printStackTrace();
+//            throw new IOException();
+//        }
+//    }
+//
+//    void addHashCalculating(HashCalculating hashCalculating){
+//        this.hashCalculating = hashCalculating;
+//    }
 
     void setOutputStream(@NotNull OutputStream outputStream) {
         this.outputStream = outputStream;
@@ -85,7 +92,7 @@ public class DAOValue implements Closeable {
         this.proxedInputStream = proxedInputStream;
     }
 
-    interface HashCalculating{
-        String calculate() throws NoSuchAlgorithmException;
-    }
+//    interface HashCalculating{
+//        String calculate() throws NoSuchAlgorithmException;
+//    }
 }

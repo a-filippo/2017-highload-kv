@@ -16,9 +16,7 @@ public class PutHttpQuery extends HttpQuery {
         super(Request.Put(uri));
     }
 
-    public void setBody(InputStream inputStream, int size) throws IOException {
-        request.body(new InputStreamEntity(inputStream, (long)size));
-    }
+
 
 //    @Override
 //    public PutHttpQueryResult execute() {

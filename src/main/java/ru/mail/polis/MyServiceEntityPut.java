@@ -10,12 +10,13 @@ import com.sun.net.httpserver.HttpExchange;
 
 import ru.mail.polis.dao.DAO;
 import ru.mail.polis.dao.DAOValue;
+import ru.mail.polis.httpclient.HttpQuery;
 import ru.mail.polis.httpclient.HttpQueryResult;
 import ru.mail.polis.httpclient.PutHttpQuery;
 
 public class MyServiceEntityPut extends MyServiceEntityAction {
 
-    public MyServiceEntityPut(@NotNull MyServiceParameters myServiceParameters) {
+    public MyServiceEntityPut(@NotNull MyServiceParameters myServiceParameters) throws NoSuchReplicasException {
         super(myServiceParameters);
     }
 
@@ -24,18 +25,24 @@ public class MyServiceEntityPut extends MyServiceEntityAction {
 
         int size = getSize();
 
-        try (DAOValue value = new DAOValue(httpExchange.getRequestBody(), size)) {
+        long timestamp = getTimestamp();
+        if (timestamp < 0){
+            timestamp = System.currentTimeMillis();
+        }
+
+        try (DAOValue value = new DAOValue(httpExchange.getRequestBody(), size, timestamp)) {
 
             dao.put(id, value);
             ListOfReplicas listOfSuccessReplicasPut = new ListOfReplicas();;
 
             if (nextReplica != null){
-                PutHttpQuery putHttpQuery;
+                HttpQuery putHttpQuery;
                 try {
-                    putHttpQuery = new PutHttpQuery(new URI(nextReplica + MyService.CONTEXT_ENTITY + "?" +httpExchange.getRequestURI().getQuery()));
+                    putHttpQuery = HttpQuery.Put(new URI(nextReplica + MyService.CONTEXT_ENTITY + "?" +httpExchange.getRequestURI().getQuery()));
                     ListOfReplicas replicasToRequest = new ListOfReplicas(fromReplicas);
                     replicasToRequest.add(myReplicaHost);
                     putHttpQuery.addReplicasToRequest(replicasToRequest);
+                    putHttpQuery.addTimestamp(timestamp);
 
                     putHttpQuery.setBody(value.getProxedInputStream(), size);
 
@@ -65,6 +72,9 @@ public class MyServiceEntityPut extends MyServiceEntityAction {
         } catch (IllegalArgumentException e) {
             httpExchange.sendResponseHeaders(HttpHelpers.STATUS_BAD_ARGUMENT, 0);
             httpExchange.getResponseBody().close();
+        } catch (Exception e){
+            e.printStackTrace();
+            throw e;
         }
     }
 }
