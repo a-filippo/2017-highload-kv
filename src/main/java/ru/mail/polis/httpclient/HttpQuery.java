@@ -36,6 +36,9 @@ public class HttpQuery {
     public static HttpQuery Get(URI uri){
         return new HttpQuery(Request.Get(uri));
     }
+    public static HttpQuery Delete(URI uri){
+        return new HttpQuery(Request.Delete(uri));
+    }
 
     public void addHeader(String key, String value){
         request.addHeader(key, value);

@@ -1,25 +1,17 @@
 package ru.mail.polis;
 
 import java.io.IOException;
-import java.io.OutputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.List;
 import java.util.NoSuchElementException;
 
-import org.apache.commons.io.output.NullOutputStream;
 import org.jetbrains.annotations.NotNull;
 
 import com.sun.net.httpserver.Headers;
 
 import ru.mail.polis.dao.DAOValue;
-import ru.mail.polis.httpclient.GetHttpQuery;
-import ru.mail.polis.httpclient.HttpQuery;
-import ru.mail.polis.httpclient.HttpQueryResult;
 
 public class MyServiceEntityHead extends MyServiceEntityAction {
 
-    public MyServiceEntityHead(@NotNull MyServiceParameters myServiceParameters) throws NoSuchReplicasException, IllegalIdException {
+    public MyServiceEntityHead(@NotNull MyServiceParameters myServiceParameters) throws ReplicaParametersException, IllegalIdException {
         super(myServiceParameters);
     }
 

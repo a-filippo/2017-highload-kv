@@ -15,4 +15,6 @@ public class HttpHelpers {
 //    public static final String HEADER_HASH_OF_VALUE = "Hash-Of-Value";
     public static final String HEADER_TIMESTAMP = "Value-Timestamp";
     public static final String HEADER_SIZE = "Value-Size";
+    public static final String HEADER_GET_INFO = "Header-Get-Info";
+    public static final String HEADER_GET_INFO_VALUE = "yes";
 }

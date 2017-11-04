@@ -2,14 +2,10 @@ package ru.mail.polis;
 
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.net.URI;
-import java.util.NoSuchElementException;
 import java.util.Set;
 
 
-import org.apache.commons.io.output.NullOutputStream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,9 +13,6 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
 import ru.mail.polis.dao.DAO;
-import ru.mail.polis.dao.DAOValue;
-import ru.mail.polis.httpclient.HttpQueryResult;
-import ru.mail.polis.httpclient.PutHttpQuery;
 
 public class MyService implements KVService {
     public final static String CONTEXT_ENTITY = "/v0/entity";
@@ -77,7 +70,7 @@ public class MyService implements KVService {
 //
 //                    ListOfReplicas fromReplicas = getFromReplicas(httpExchange);
 //                    String nextReplica = findNextReplica(fromReplicas, replicaParameters);
-//                    System.out.println(httpExchange.getRequestHeaders().values().toString());
+                    System.out.println(httpExchange.getRequestHeaders().values().toString());
                     switch (httpExchange.getRequestMethod()) {
                         case "GET":
                             MyServiceEntityGet myServiceEntityGet = new MyServiceEntityGet(myServiceParameters);
@@ -95,7 +88,6 @@ public class MyService implements KVService {
                             break;
 
                         case "HEAD":
-                            System.out.println(httpExchange.getRequestHeaders().values().toString());
                             MyServiceEntityHead myServiceEntityHead = new MyServiceEntityHead(myServiceParameters);
                             myServiceEntityHead.execute();
                             break;
@@ -104,11 +96,8 @@ public class MyService implements KVService {
                             httpExchange.sendResponseHeaders(HttpHelpers.STATUS_NOT_FOUND, 0);
                             httpExchange.getResponseBody().close();
                     }
-                } catch (IllegalIdException e){
+                } catch (IllegalIdException | ReplicaParametersException e){
                     httpExchange.sendResponseHeaders(HttpHelpers.STATUS_BAD_ARGUMENT, 0);
-                    httpExchange.getResponseBody().close();
-                } catch (NoSuchReplicasException e){
-                    httpExchange.sendResponseHeaders(HttpHelpers.STATUS_NOT_ENOUGH_REPLICAS, 0);
                     httpExchange.getResponseBody().close();
                 } catch (IOException e) {
                     e.printStackTrace();

@@ -18,14 +18,14 @@ class ServiceQueryParameters {
     }
 
     @NotNull
-    ReplicaParameters getReplicaParameters(int replicasCount) throws NoSuchReplicasException{
+    ReplicaParameters getReplicaParameters(int replicasCount) throws ReplicaParametersException {
         if (replicaParameters == null){
             return new ReplicaParameters(replicasCount / 2 + 1, replicasCount);
         } else if (
                 replicaParameters.from() > replicasCount ||
                 replicaParameters.ack() > replicaParameters.from() ||
                 replicaParameters.ack() > replicasCount){
-            throw new NoSuchReplicasException("Ack: " + replicaParameters.ack() + ", from: " + replicaParameters.from());
+            throw new ReplicaParametersException("Ack: " + replicaParameters.ack() + ", from: " + replicaParameters.from());
         } else {
             return replicaParameters;
         }

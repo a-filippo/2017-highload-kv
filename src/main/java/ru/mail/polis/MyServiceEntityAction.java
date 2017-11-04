@@ -1,9 +1,7 @@
 package ru.mail.polis;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -43,7 +41,7 @@ abstract public class MyServiceEntityAction {
     @Nullable
     protected final String nextReplica;
 
-    public MyServiceEntityAction(@NotNull MyServiceParameters myServiceParameters) throws NoSuchReplicasException, IllegalIdException {
+    public MyServiceEntityAction(@NotNull MyServiceParameters myServiceParameters) throws ReplicaParametersException, IllegalIdException {
         this.myServiceParameters = myServiceParameters;
 
         this.dao = myServiceParameters.getDao();
@@ -76,12 +74,13 @@ abstract public class MyServiceEntityAction {
 //                    return replicaHost;
 //                }
 //            }
-            int hash = key.hashCode();
-            ListOfReplicas listOfNextReplicas = new ListOfReplicas(replicasHosts);
-            listOfNextReplicas.exclude(fromReplicas);
-            List<String> listOfReplicas = Arrays.asList(listOfNextReplicas.toArray());
-            listOfReplicas.sort(Comparator.comparingInt(string -> string.hashCode() ^ hash));
-            return listOfReplicas.get(0);
+
+//            int hash = key.hashCode();
+//            ListOfReplicas listOfNextReplicas = new ListOfReplicas(replicasHosts);
+//            listOfNextReplicas.exclude(fromReplicas);
+//            List<String> listOfReplicas = Arrays.asList(listOfNextReplicas.toArray());
+//            listOfReplicas.sort(Comparator.comparingInt(string -> string.hashCode() ^ hash));
+            return findReplicas(key).get(0);
         }
         return null;
     }
