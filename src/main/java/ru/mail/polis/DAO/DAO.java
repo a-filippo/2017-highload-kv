@@ -15,5 +15,5 @@ public interface DAO {
 
     void put (@NotNull String key, @NotNull DAOValue value) throws IOException, IllegalArgumentException;
 
-    void delete (@NotNull String key) throws IOException, IllegalArgumentException;
+    void delete (@NotNull String key, long deleteTimestamp) throws IOException, IllegalArgumentException;
 }

@@ -15,5 +15,5 @@ public interface DAOModel {
 
     void putValue(@NotNull DAOModelValue value, boolean issetInStore) throws IOException;
 
-    void deleteValue(@NotNull String key) throws IOException;
+    void deleteValue(@NotNull String key, long deleteTimestamp) throws IOException;
 }

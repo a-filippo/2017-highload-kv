@@ -24,7 +24,7 @@ class ServiceQueryParameters {
         } else if (
                 replicaParameters.from() > replicasCount ||
                 replicaParameters.ack() > replicaParameters.from() ||
-                replicaParameters.ack() > replicasCount){
+                replicaParameters.ack() < 1){
             throw new ReplicaParametersException("Ack: " + replicaParameters.ack() + ", from: " + replicaParameters.from());
         } else {
             return replicaParameters;

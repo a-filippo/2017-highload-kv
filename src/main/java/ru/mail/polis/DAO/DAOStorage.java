@@ -136,7 +136,7 @@ public class DAOStorage implements DAO {
     }
 
     @Override
-    public void delete(@NotNull String key) throws IOException, IllegalArgumentException {
+    public void delete(@NotNull String key, long deleteTimestamp) throws IOException, IllegalArgumentException {
         throwArgumentException(key);
 
         String path = modelValues.getPath(key);
@@ -147,7 +147,7 @@ public class DAOStorage implements DAO {
                 Files.delete(Paths.get(HARD_STORAGE_FULL_PATH + path));
             }
 
-            modelValues.deleteValue(key);
+            modelValues.deleteValue(key, deleteTimestamp);
         }
     }
 

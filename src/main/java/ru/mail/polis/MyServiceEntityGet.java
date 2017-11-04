@@ -1,5 +1,6 @@
 package ru.mail.polis;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -136,9 +137,14 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
             } else if (replicasWithNeedingValue.size() >= replicaParameters.ack()) {
                 if (replicasWithNeedingValue.contains(myReplicaHost)) {
                     try (DAOValue daoValue = dao.get(id)) {
-                        httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_GET, daoValue.size());
-                        IOHelpers.copy(daoValue.getInputStream(), httpExchange.getResponseBody());
-                        httpExchange.getResponseBody().close();
+                        if (daoValue.size() < 0) {
+                            httpExchange.sendResponseHeaders(HttpHelpers.STATUS_NOT_FOUND, 0);
+                            httpExchange.getResponseBody().close();
+                        } else {
+                            httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_GET, daoValue.size());
+                            IOHelpers.copy(daoValue.getInputStream(), httpExchange.getResponseBody());
+                            httpExchange.getResponseBody().close();
+                        }
                     } catch (IllegalArgumentException e) {
                         httpExchange.sendResponseHeaders(HttpHelpers.STATUS_BAD_ARGUMENT, 0);
                         httpExchange.getResponseBody().close();
@@ -154,15 +160,26 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
                         getHttpQuery.addReplicasToRequest(new ListOfReplicas(myReplicaHost));
 
                         HttpQueryResult getValueResult = getHttpQuery.execute();
-                        httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_GET, 0);
-                        IOHelpers.copy(getValueResult.getInputStream(), httpExchange.getResponseBody());
-                        httpExchange.getResponseBody().close();
+
+                        switch (getValueResult.getStatusCode()){
+                            case HttpHelpers.STATUS_NOT_FOUND:
+                                httpExchange.sendResponseHeaders(HttpHelpers.STATUS_NOT_FOUND, 0);
+                                httpExchange.getResponseBody().close();
+                                break;
+                            case HttpHelpers.STATUS_SUCCESS_GET:
+                                httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_GET, getValueResult.getSize());
+                                IOHelpers.copy(getValueResult.getInputStream(), httpExchange.getResponseBody());
+                                httpExchange.getResponseBody().close();
+                                break;
+                        }
 
                     } catch (URISyntaxException e) {
                         e.printStackTrace();
                         throw new IOException();
                     } catch (HttpHostConnectException e){
                         System.out.println("eeeeeee"); // TODO
+                        e.printStackTrace();
+                    } catch (IOException e){
                         e.printStackTrace();
                     }
                 }
@@ -187,8 +204,13 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
 
                     httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_GET, 0);
                 } else {
-                    httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_GET, value.size());
-                    IOHelpers.copy(value.getInputStream(), httpExchange.getResponseBody());
+                    if (value.size() < 0){
+                        httpExchange.sendResponseHeaders(HttpHelpers.STATUS_NOT_FOUND, 0);
+                        httpExchange.getResponseBody().close();
+                    } else {
+                        httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_GET, value.size());
+                        IOHelpers.copy(value.getInputStream(), httpExchange.getResponseBody());
+                    }
                 }
                 httpExchange.getResponseBody().close();
             } catch (NoSuchElementException e) {

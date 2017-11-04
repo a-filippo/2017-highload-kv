@@ -7,6 +7,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 
+import org.apache.http.conn.HttpHostConnectException;
 import org.jetbrains.annotations.NotNull;
 
 import ru.mail.polis.dao.DAOStorage;
@@ -26,7 +27,7 @@ public class MyServiceEntityPut extends MyServiceEntityAction {
 
         long timestamp = getTimestamp();
         if (timestamp < 0){
-            timestamp = System.currentTimeMillis();
+            timestamp = getCurrentTimestamp();
         }
 
         if (fromReplicas.empty()) {
@@ -79,12 +80,14 @@ public class MyServiceEntityPut extends MyServiceEntityAction {
 
                         } catch (URISyntaxException e) {
                             e.printStackTrace();
+                        } catch (HttpHostConnectException e){
+                            // nothing
                         }
                     }
                 }
 
                 if (countOfValueCopy < replicaParameters.ack()){
-                    httpExchange.sendResponseHeaders(HttpHelpers.STATUS_INTERNAL_ERROR, 0);
+                    httpExchange.sendResponseHeaders(HttpHelpers.STATUS_NOT_ENOUGH_REPLICAS, 0);
                     httpExchange.getResponseBody().close();
                 } else {
                     httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_PUT, 0);

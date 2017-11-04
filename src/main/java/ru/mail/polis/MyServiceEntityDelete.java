@@ -27,11 +27,13 @@ public class MyServiceEntityDelete extends MyServiceEntityAction {
 
         if (fromReplicas.empty()) {
 
+            long timestamp = getCurrentTimestamp();
+
             for (int i = 0; i < from; i++) {
                 String replicaHost = listOfReplicasForRequest.get(i);
 
                 if (replicaHost.equals(myReplicaHost)) {
-                    dao.delete(id);
+                    dao.delete(id, timestamp);
                     countOfSuccess++;
                     countOfWorkingReplicas++;
                 } else {
@@ -40,6 +42,7 @@ public class MyServiceEntityDelete extends MyServiceEntityAction {
                         HttpQuery deleteHttpQuery = HttpQuery.Delete(new URI(replicaHost + MyService.CONTEXT_ENTITY + "?" + httpExchange.getRequestURI().getQuery()));
 
                         deleteHttpQuery.addReplicasToRequest(new ListOfReplicas(myReplicaHost));
+                        deleteHttpQuery.addTimestamp(timestamp);
                         HttpQueryResult httpQueryResult = deleteHttpQuery.execute();
 
                         countOfWorkingReplicas++;
@@ -68,8 +71,10 @@ public class MyServiceEntityDelete extends MyServiceEntityAction {
 
 
         } else {
+            long timestamp = getTimestamp();
+
             try {
-                dao.delete(id);
+                dao.delete(id, timestamp);
                 httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_DELETE, 0);
                 httpExchange.getResponseBody().close();
             } catch (IllegalArgumentException e) {

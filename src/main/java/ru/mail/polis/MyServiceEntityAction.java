@@ -101,6 +101,10 @@ abstract public class MyServiceEntityAction {
         return listOfAllReplicas;
     }
 
+    protected long getCurrentTimestamp(){
+        return System.currentTimeMillis();
+    }
+
     protected int getSize(){
         return Integer.parseInt(httpExchange.getRequestHeaders().getFirst(HTTP.CONTENT_LEN));
     }

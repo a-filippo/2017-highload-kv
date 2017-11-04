@@ -6,6 +6,7 @@ import java.io.InputStream;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.fluent.Response;
+import org.apache.http.protocol.HTTP;
 
 import ru.mail.polis.HttpHelpers;
 import ru.mail.polis.ListOfReplicas;
@@ -30,7 +31,7 @@ public class HttpQueryResult {
     }
 
     public InputStream getInputStream() throws IOException {
-        return response.returnContent().asStream();
+        return httpResponse.getEntity().getContent();
     }
 
 //    public String getHash(){
@@ -40,5 +41,10 @@ public class HttpQueryResult {
     public long getTimestamp(){
         Header timestampHeader = httpResponse.getFirstHeader(HttpHelpers.HEADER_TIMESTAMP);
         return timestampHeader == null ? -1 : Long.valueOf(timestampHeader.getValue());
+    }
+
+    public int getSize(){
+        Header contentLengthHeader = httpResponse.getFirstHeader(HTTP.CONTENT_LEN);
+        return contentLengthHeader == null ? -1 : Integer.valueOf(contentLengthHeader.getValue());
     }
 }

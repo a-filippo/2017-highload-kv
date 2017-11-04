@@ -25,7 +25,7 @@ public class DerbyDAOModel implements DAOModel {
     private PreparedStatementStore UpdateRowPreparedStatementStore;
     private PreparedStatementStore InsertRowPreparedStatementStore;
     private PreparedStatementStore GetPathRowPreparedStatementStore;
-    private PreparedStatementStore DeleteRowPreparedStatementStore;
+//    private PreparedStatementStore DeleteRowPreparedStatementStore;
 
     public DerbyDAOModel(String dbPath) throws SQLException {
         DB_URL = "jdbc:derby:" + dbPath + ";create=true";
@@ -121,10 +121,14 @@ public class DerbyDAOModel implements DAOModel {
     }
 
     @Override
-    public void deleteValue(@NotNull String key) throws IOException{
+    public void deleteValue(@NotNull String key, long deleteTimestamp) throws IOException{
         try {
-            PreparedStatement preparedStatement = DeleteRowPreparedStatementStore.getStatement();
-            preparedStatement.setString(1, key);
+            PreparedStatement preparedStatement = UpdateRowPreparedStatementStore.getStatement();
+            preparedStatement.setBytes(1, new byte[0]);
+            preparedStatement.setInt(2, -1);
+            preparedStatement.setLong(3, deleteTimestamp);
+            preparedStatement.setString(4, "");
+            preparedStatement.setString(5, key);
             preparedStatement.executeUpdate();
         } catch (SQLException e){
             e.printStackTrace();
@@ -170,11 +174,21 @@ public class DerbyDAOModel implements DAOModel {
             COL_KEY + ") values (?, ?, ?, ?, ?)"
         );
 
-        DeleteRowPreparedStatementStore = new PreparedStatementStore(
-            "DELETE FROM " +
-            TABLE_STORAGE + " WHERE " +
-            COL_KEY + " = ?"
-        );
+//        DeleteRowPreparedStatementStore = new PreparedStatementStore(
+//            "DELETE FROM " +
+//            TABLE_STORAGE + " WHERE " +
+//            COL_KEY + " = ?"
+//        );
+
+//        DeleteRowPreparedStatementStore = new PreparedStatementStore(
+//            "UPDATE " +
+//                    TABLE_STORAGE + " SET " +
+//                    COL_VALUE + " = ?," +
+//                    COL_SIZE + " = ?," +
+//                    COL_TIMESTAMP + " = ?," +
+//                    COL_PATH + " = ? WHERE " +
+//                    COL_KEY + " = ?"
+//        );
     }
 
     private class PreparedStatementStore{
