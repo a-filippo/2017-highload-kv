@@ -16,71 +16,124 @@ public class MyServiceEntityDelete extends MyServiceEntityAction {
         super(myServiceParameters);
     }
 
+//    @Override
+//    public void execute() throws IOException {
+//        List<String> listOfReplicasForRequest = findReplicas(id);
+//
+//        int from = replicaParameters.from();
+//
+//        int countOfWorkingReplicas = 0;
+//        int countOfSuccess = 0;
+//
+//        if (fromReplicas.empty()) {
+//
+//            long timestamp = getCurrentTimestamp();
+//
+//            for (int i = 0; i < from; i++) {
+//                String replicaHost = listOfReplicasForRequest.get(i);
+//
+//                if (replicaHost.equals(myReplicaHost)) {
+//                    dao.delete(id, timestamp);
+//                    countOfSuccess++;
+//                    countOfWorkingReplicas++;
+//                } else {
+//
+//                    try {
+//                        HttpQuery deleteHttpQuery = HttpQuery.Delete(new URI(replicaHost + MyService.CONTEXT_ENTITY + "?" + httpExchange.getRequestURI().getQuery()));
+//
+//                        deleteHttpQuery.addReplicasToRequest(new ListOfReplicas(myReplicaHost));
+//                        deleteHttpQuery.addTimestamp(timestamp);
+//                        HttpQueryResult httpQueryResult = deleteHttpQuery.execute();
+//
+//                        countOfWorkingReplicas++;
+//
+//                        if (httpQueryResult.getStatusCode() == HttpHelpers.STATUS_SUCCESS_DELETE) {
+//                            countOfSuccess++;
+//                        }
+//
+//                    } catch (URISyntaxException e) {
+//                        e.printStackTrace();
+//                    } catch (HttpHostConnectException e) {
+//                        // nothing
+//                    }
+//                }
+//
+//            }
+//
+//            if (countOfWorkingReplicas < replicaParameters.ack()){
+//                httpExchange.sendResponseHeaders(HttpHelpers.STATUS_NOT_ENOUGH_REPLICAS, 0);
+//                httpExchange.getResponseBody().close();
+//                return;
+//            } else {
+//                httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_DELETE, 0);
+//                httpExchange.getResponseBody().close();
+//            }
+//
+//
+//        } else {
+//            long timestamp = getTimestamp();
+//
+//            try {
+//                dao.delete(id, timestamp);
+//                httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_DELETE, 0);
+//                httpExchange.getResponseBody().close();
+//            } catch (IllegalArgumentException e) {
+//                httpExchange.sendResponseHeaders(HttpHelpers.STATUS_BAD_ARGUMENT, 0);
+//                httpExchange.getResponseBody().close();
+//            }
+//        }
+//    }
+
     @Override
-    public void execute() throws IOException {
-        List<String> listOfReplicasForRequest = findReplicas(id);
+    public void processQueryFromReplica() throws IOException {
+        try {
+            dao.delete(id, getTimestamp());
+            httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_DELETE, 0);
+            httpExchange.getResponseBody().close();
+        } catch (IllegalArgumentException e) {
+            httpExchange.sendResponseHeaders(HttpHelpers.STATUS_BAD_ARGUMENT, 0);
+            httpExchange.getResponseBody().close();
+        }
+    }
 
-        int from = replicaParameters.from();
+    @Override
+    public void processQueryFromClient() throws IOException {
+        final CountOfReplicaStatus counts = new CountOfReplicaStatus();
+        final long timestamp = getCurrentTimestamp();
 
-        int countOfWorkingReplicas = 0;
-        int countOfSuccess = 0;
-
-        if (fromReplicas.empty()) {
-
-            long timestamp = getCurrentTimestamp();
-
-            for (int i = 0; i < from; i++) {
-                String replicaHost = listOfReplicasForRequest.get(i);
-
-                if (replicaHost.equals(myReplicaHost)) {
-                    dao.delete(id, timestamp);
-                    countOfSuccess++;
-                    countOfWorkingReplicas++;
-                } else {
-
-                    try {
-                        HttpQuery deleteHttpQuery = HttpQuery.Delete(new URI(replicaHost + MyService.CONTEXT_ENTITY + "?" + httpExchange.getRequestURI().getQuery()));
-
-                        deleteHttpQuery.addReplicasToRequest(new ListOfReplicas(myReplicaHost));
-                        deleteHttpQuery.addTimestamp(timestamp);
-                        HttpQueryResult httpQueryResult = deleteHttpQuery.execute();
-
-                        countOfWorkingReplicas++;
-
-                        if (httpQueryResult.getStatusCode() == HttpHelpers.STATUS_SUCCESS_DELETE) {
-                            countOfSuccess++;
-                        }
-
-                    } catch (URISyntaxException e) {
-                        e.printStackTrace();
-                    } catch (HttpHostConnectException e) {
-                        // nothing
-                    }
-                }
-
-            }
-
-            if (countOfWorkingReplicas < replicaParameters.ack()){
-                httpExchange.sendResponseHeaders(HttpHelpers.STATUS_NOT_ENOUGH_REPLICAS, 0);
-                httpExchange.getResponseBody().close();
-                return;
-            } else {
-                httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_DELETE, 0);
-                httpExchange.getResponseBody().close();
-            }
-
-
-        } else {
-            long timestamp = getTimestamp();
-
-            try {
+        forEachNeedingReplica(replicaHost -> {
+            if (replicaHost.equals(myReplicaHost)) {
                 dao.delete(id, timestamp);
-                httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_DELETE, 0);
-                httpExchange.getResponseBody().close();
-            } catch (IllegalArgumentException e) {
-                httpExchange.sendResponseHeaders(HttpHelpers.STATUS_BAD_ARGUMENT, 0);
-                httpExchange.getResponseBody().close();
+                counts.deleted.plus();
+                counts.working.plus();
+            } else {
+
+                try {
+                    HttpQuery deleteHttpQuery = HttpQuery.Delete(new URI(replicaHost + MyService.CONTEXT_ENTITY + "?" + httpExchange.getRequestURI().getQuery()));
+
+                    deleteHttpQuery.addReplicasToRequest(new ListOfReplicas(myReplicaHost));
+                    deleteHttpQuery.addTimestamp(timestamp);
+                    HttpQueryResult httpQueryResult = deleteHttpQuery.execute();
+
+                    counts.working.plus();
+
+                    if (httpQueryResult.getStatusCode() == HttpHelpers.STATUS_SUCCESS_DELETE) {
+                        counts.deleted.plus();
+                    }
+
+                } catch (URISyntaxException e) {
+                    e.printStackTrace();
+                } catch (HttpHostConnectException e) {
+                    // nothing
+                }
             }
+            return true;
+        });
+
+        if (counts.working.get() < replicaParameters.ack()){
+            sendEmptyResponse(HttpHelpers.STATUS_NOT_ENOUGH_REPLICAS);
+        } else {
+            sendEmptyResponse(HttpHelpers.STATUS_SUCCESS_DELETE);
         }
     }
 }

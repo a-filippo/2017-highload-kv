@@ -21,94 +21,163 @@ public class MyServiceEntityPut extends MyServiceEntityAction {
         super(myServiceParameters);
     }
 
+//    @Override
+//    public void execute() throws IOException {
+//        int size = getSizeFromHeader();
+//
+//        long timestamp = getTimestamp();
+//        if (timestamp < 0){
+//            timestamp = getCurrentTimestamp();
+//        }
+//
+//        if (fromReplicas.empty()) {
+//
+//            String tempPath = dao.getStoragePath() + File.separator + DAOStorage.TEMP_PATH;
+//
+//            try (TemporaryValueStorage temporaryValueStorage = new TemporaryValueStorage(
+//                    tempPath,
+//                    httpExchange.getRequestBody(),
+//                    size
+//            )) {
+//
+//                int countOfWorkingReplicas = 0;
+//                int countOfValueCopy = 0;
+//
+//                int from = replicaParameters.from();
+//
+//                List<String> listOfReplicasForRequest = findReplicas(id);
+//
+//                for (int i = 0; i < from; i++) {
+//                    String replicaHost = listOfReplicasForRequest.get(i);
+//
+//                    if (replicaHost.equals(myReplicaHost)) {
+//
+//                        DAOValue value = new DAOValue(temporaryValueStorage.getInputStream(), size, timestamp);
+//                        dao.put(id, value);
+//                        value.close();
+//                        countOfWorkingReplicas++;
+//                        countOfValueCopy++;
+//
+//                    } else {
+//
+//                        try {
+//                            HttpQuery putHttpQuery = HttpQuery.Put(new URI(replicaHost + MyService.CONTEXT_ENTITY + "?" + httpExchange.getRequestURI().getQuery()));
+//                            putHttpQuery.addReplicasToRequest(new ListOfReplicas(myReplicaHost));
+//                            putHttpQuery.addTimestamp(timestamp);
+//
+//                            InputStream inputStream = temporaryValueStorage.getInputStream();
+//                            putHttpQuery.setBody(inputStream, size);
+//
+//                            HttpQueryResult httpQueryResult = putHttpQuery.execute();
+//                            countOfWorkingReplicas++;
+//                            inputStream.close();
+//
+//                            switch (httpQueryResult.getStatusCode()) {
+//                                case HttpHelpers.STATUS_SUCCESS_PUT:
+//                                    countOfValueCopy++;
+//                                    break;
+//                            }
+//
+//                        } catch (URISyntaxException e) {
+//                            e.printStackTrace();
+//                        } catch (HttpHostConnectException e){
+//                            // nothing
+//                        }
+//                    }
+//                }
+//
+//                if (countOfValueCopy < replicaParameters.ack()){
+//                    httpExchange.sendResponseHeaders(HttpHelpers.STATUS_NOT_ENOUGH_REPLICAS, 0);
+//                    httpExchange.getResponseBody().close();
+//                } else {
+//                    httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_PUT, 0);
+//                    httpExchange.getResponseBody().close();
+//                }
+//            }
+//        } else {
+//            try (DAOValue value = new DAOValue(httpExchange.getRequestBody(), size, timestamp)) {
+//
+//                dao.put(id, value);
+//
+//                httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_PUT, 0);
+//                httpExchange.getResponseBody().close();
+//            }
+//        }
+//    }
+
     @Override
-    public void execute() throws IOException {
-        int size = getSize();
-
-        long timestamp = getTimestamp();
-        if (timestamp < 0){
-            timestamp = getCurrentTimestamp();
+    public void processQueryFromReplica() throws IOException {
+        try (DAOValue value = new DAOValue(httpExchange.getRequestBody(), getSize(), getTimestamp())) {
+            dao.put(id, value);
+            sendEmptyResponse(HttpHelpers.STATUS_SUCCESS_PUT);
         }
+    }
 
-        if (fromReplicas.empty()) {
+    @Override
+    public void processQueryFromClient() throws IOException {
+        int size = getSize();
+        final long timestamp = getCurrentTimestamp();
 
-            String tempPath = dao.getStoragePath() + File.separator + DAOStorage.TEMP_PATH;
+        CountOfReplicaStatus counts = new CountOfReplicaStatus();
 
-            try (TemporaryValueStorage temporaryValueStorage = new TemporaryValueStorage(
-                    tempPath,
-                    httpExchange.getRequestBody(),
-                    size
+        try (TemporaryValueStorage temporaryValueStorage = new TemporaryValueStorage(
+                dao.getStoragePath() + File.separator + DAOStorage.TEMP_PATH,
+                httpExchange.getRequestBody(),
+                size
             )) {
 
-                int countOfWorkingReplicas = 0;
-                int countOfValueCopy = 0;
+            forEachNeedingReplica(replicaHost -> {
 
-                int from = replicaParameters.from();
+                if (replicaHost.equals(myReplicaHost)) {
 
-                List<String> listOfReplicasForRequest = findReplicas(id);
+                    DAOValue value = new DAOValue(temporaryValueStorage.getInputStream(), size, timestamp);
+                    dao.put(id, value);
+                    value.close();
+                    counts.working.plus();
+                    counts.put.plus();
 
-                for (int i = 0; i < from; i++) {
-                    String replicaHost = listOfReplicasForRequest.get(i);
+                } else {
 
-                    if (replicaHost.equals(myReplicaHost)) {
+                    try {
+                        HttpQuery putHttpQuery = HttpQuery.Put(new URI(replicaHost + MyService.CONTEXT_ENTITY + "?" + httpExchange.getRequestURI().getQuery()));
+                        putHttpQuery.addReplicasToRequest(new ListOfReplicas(myReplicaHost));
+                        putHttpQuery.addTimestamp(timestamp);
 
-                        DAOValue value = new DAOValue(temporaryValueStorage.getInputStream(), size, timestamp);
-                        dao.put(id, value);
-                        value.close();
-                        countOfWorkingReplicas++;
-                        countOfValueCopy++;
+                        InputStream inputStream = temporaryValueStorage.getInputStream();
+                        putHttpQuery.setBody(inputStream, size);
 
-                    } else {
+                        HttpQueryResult httpQueryResult = putHttpQuery.execute();
+                        counts.working.plus();
+                        inputStream.close();
 
-                        try {
-                            HttpQuery putHttpQuery = HttpQuery.Put(new URI(replicaHost + MyService.CONTEXT_ENTITY + "?" + httpExchange.getRequestURI().getQuery()));
-                            putHttpQuery.addReplicasToRequest(new ListOfReplicas(myReplicaHost));
-                            putHttpQuery.addTimestamp(timestamp);
-
-                            InputStream inputStream = temporaryValueStorage.getInputStream();
-                            putHttpQuery.setBody(inputStream, size);
-
-                            HttpQueryResult httpQueryResult = putHttpQuery.execute();
-                            countOfWorkingReplicas++;
-                            inputStream.close();
-
-                            switch (httpQueryResult.getStatusCode()) {
-                                case HttpHelpers.STATUS_SUCCESS_PUT:
-                                    countOfValueCopy++;
-                                    break;
-                            }
-
-                        } catch (URISyntaxException e) {
-                            e.printStackTrace();
-                        } catch (HttpHostConnectException e){
-                            // nothing
+                        switch (httpQueryResult.getStatusCode()) {
+                            case HttpHelpers.STATUS_SUCCESS_PUT:
+                                counts.put.plus();
+                                break;
                         }
+
+                    } catch (URISyntaxException e) {
+                        e.printStackTrace();
+                    } catch (HttpHostConnectException e){
+                        // nothing
                     }
                 }
 
-                if (countOfValueCopy < replicaParameters.ack()){
-                    httpExchange.sendResponseHeaders(HttpHelpers.STATUS_NOT_ENOUGH_REPLICAS, 0);
-                    httpExchange.getResponseBody().close();
-                } else {
-                    httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_PUT, 0);
-                    httpExchange.getResponseBody().close();
-                }
-            }
+                return true;
+            });
+        }
+
+        if (counts.put.get() < replicaParameters.ack()){
+            sendEmptyResponse(HttpHelpers.STATUS_NOT_ENOUGH_REPLICAS);
         } else {
-            try (DAOValue value = new DAOValue(httpExchange.getRequestBody(), size, timestamp)) {
-
-                dao.put(id, value);
-
-                httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_PUT, 0);
-                httpExchange.getResponseBody().close();
-            }
+            sendEmptyResponse(HttpHelpers.STATUS_SUCCESS_PUT);
         }
     }
 /*
     @Override
     public void execute() throws IOException{
 
-        int size = getSize();
+        int size = getSizeFromHeader();
 
         long timestamp = getTimestamp();
         if (timestamp < 0){
