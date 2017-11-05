@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -34,7 +35,7 @@ public class TemporaryValueStorage implements Closeable {
     public TemporaryValueStorage(String pathToDir, InputStream inputStream, int size) throws IOException{
         this.inputStream = inputStream;
         String filename = System.currentTimeMillis() + "-" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE);
-        inputStreams = new ArrayList<>();
+        inputStreams = Collections.synchronizedList(new ArrayList<>());
 
         if (size < DAOValue.MIN_VALUE_SIZE_FOR_STORAGE_IN_FILE){
             byteValue = new byte[size];

@@ -43,8 +43,13 @@ public class HttpQueryResult {
         return timestampHeader == null ? -1 : Long.valueOf(timestampHeader.getValue());
     }
 
-    public int getSize(){
+    public int getSizeFromHeader(){
         Header contentLengthHeader = httpResponse.getFirstHeader(HTTP.CONTENT_LEN);
         return contentLengthHeader == null ? -1 : Integer.valueOf(contentLengthHeader.getValue());
+    }
+
+    public int getValueSize(){
+        Header valueSizeHeader = httpResponse.getFirstHeader(HttpHelpers.HEADER_SIZE);
+        return valueSizeHeader == null ? -1 : Integer.valueOf(valueSizeHeader.getValue());
     }
 }

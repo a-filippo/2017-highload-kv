@@ -118,25 +118,34 @@ public class MyServiceEntityPut extends MyServiceEntityAction {
         int size = getSize();
         final long timestamp = getCurrentTimestamp();
 
-        CountOfReplicaStatus counts = new CountOfReplicaStatus();
+//        CountOfReplicaStatus counts = new CountOfReplicaStatus();
 
-        try (TemporaryValueStorage temporaryValueStorage = new TemporaryValueStorage(
+        TemporaryValueStorage temporaryValueStorage = new TemporaryValueStorage(
                 dao.getStoragePath() + File.separator + DAOStorage.TEMP_PATH,
                 httpExchange.getRequestBody(),
                 size
-            )) {
+            );
 
-            forEachNeedingReplica(replicaHost -> {
+        ResultsOfReplicasAnswer results = forEachNeedingReplica(replicaHost -> {
 
-                if (replicaHost.equals(myReplicaHost)) {
+            if (replicaHost.equals(myReplicaHost)) {
+                return threadPool.addWork(() -> {
+                    ResultOfReplicaAnswer result = new ResultOfReplicaAnswer(myReplicaHost);
 
                     DAOValue value = new DAOValue(temporaryValueStorage.getInputStream(), size, timestamp);
                     dao.put(id, value);
                     value.close();
-                    counts.working.plus();
-                    counts.put.plus();
+                    result.workingReplica();
+                    result.successOperation();
+//                        counts.working.plus();
+//                        counts.put.plus();
+                    return result;
+                });
 
-                } else {
+            } else {
+
+                return threadPool.addWork(() -> {
+                    ResultOfReplicaAnswer result = new ResultOfReplicaAnswer(myReplicaHost);
 
                     try {
                         HttpQuery putHttpQuery = HttpQuery.Put(new URI(replicaHost + MyService.CONTEXT_ENTITY + "?" + httpExchange.getRequestURI().getQuery()));
@@ -147,27 +156,31 @@ public class MyServiceEntityPut extends MyServiceEntityAction {
                         putHttpQuery.setBody(inputStream, size);
 
                         HttpQueryResult httpQueryResult = putHttpQuery.execute();
-                        counts.working.plus();
+//                            counts.working.plus();
+                        result.workingReplica();
                         inputStream.close();
 
                         switch (httpQueryResult.getStatusCode()) {
                             case HttpHelpers.STATUS_SUCCESS_PUT:
-                                counts.put.plus();
+//                                    counts.put.plus();
+                                result.successOperation();
                                 break;
                         }
 
                     } catch (URISyntaxException e) {
                         e.printStackTrace();
-                    } catch (HttpHostConnectException e){
+                    } catch (HttpHostConnectException e) {
                         // nothing
                     }
-                }
 
-                return true;
-            });
-        }
+                    return result;
+                });
+            }
+        });
 
-        if (counts.put.get() < replicaParameters.ack()){
+        temporaryValueStorage.close();
+
+        if (results.getSuccessOperations() < replicaParameters.ack()){
             sendEmptyResponse(HttpHelpers.STATUS_NOT_ENOUGH_REPLICAS);
         } else {
             sendEmptyResponse(HttpHelpers.STATUS_SUCCESS_PUT);

@@ -71,7 +71,7 @@ public class DAOStorage implements DAO {
         DAOModelValue value = modelValues.getValue(key);
 
         if (value != null){
-//            int size = value.getSize();
+//            int size = value.getSizeFromHeader();
             String path = value.getPath();
             InputStream inputStream;
 

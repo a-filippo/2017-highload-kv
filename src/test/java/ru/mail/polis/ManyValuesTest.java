@@ -28,7 +28,7 @@ public class ManyValuesTest extends TestBase{
     public static void beforeAll() throws IOException, InterruptedException {
         port = randomPort();
         data = Files.createTempDirectory();
-        storage = KVServiceFactory.create(port, data);
+//        storage = KVServiceFactory.create(port, data);
         storage.start();
     }
 

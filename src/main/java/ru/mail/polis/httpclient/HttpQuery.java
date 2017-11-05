@@ -6,7 +6,13 @@ import java.net.URI;
 
 import org.apache.http.client.fluent.Content;
 import org.apache.http.client.fluent.Request;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.InputStreamEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 
 import ru.mail.polis.HttpHelpers;
 import ru.mail.polis.ListOfReplicas;
@@ -22,6 +28,15 @@ public class HttpQuery {
 //    }
 
     public HttpQuery(Request request) {
+//        DefaultHttpClient
+//        HttpClientBuilder b = HttpClientBuilder.create();
+//        CloseableHttpClient client = b.disableAutomaticRetries().build();
+//        HttpUriRequest request1 = new HttpGet();
+//        CloseableHttpResponse response = client.execute(request1);
+//        response.
+
+
+
         this.request = request;
     }
 

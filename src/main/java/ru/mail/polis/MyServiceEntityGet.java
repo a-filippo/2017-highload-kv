@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import org.apache.http.conn.HttpHostConnectException;
@@ -26,7 +27,6 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
     public MyServiceEntityGet(@NotNull MyServiceParameters myServiceParameters) throws ReplicaParametersException, IllegalIdException {
         super(myServiceParameters);
     }
-
 
     @Override
     public void processQueryFromReplica() throws IOException {
@@ -55,42 +55,38 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
 
     @Override
     public void processQueryFromClient() throws IOException {
-        Map<Long, ListOfReplicas> infoOfReplicasByTimestamp = new HashMap<>();
-
-        final CountOfReplicaStatus counts = new CountOfReplicaStatus();
-
-        Set<Long> setOfDeletedValuesByTimestamp = new HashSet<>();
-
-        List<Future<ResultOfDedicatedReplica>> futures = new ArrayList<>();
-
-
-        boolean stopAnswer = forEachNeedingReplica(replicaHost -> {
+        ResultsOfReplicasAnswer results = forEachNeedingReplica(replicaHost -> {
 
             if (replicaHost.equals(myReplicaHost)) {
 
-                try (DAOValue daoValue = dao.get(id)) {
-                    Long timestamp = daoValue.timestamp();
+                return threadPool.addWork(() -> {
+                    ResultOfReplicaAnswer result = new ResultOfReplicaAnswer(myReplicaHost);
 
-                    if (daoValue.size() < 0){
-                        setOfDeletedValuesByTimestamp.add(timestamp);
+                    try (DAOValue daoValue = dao.get(id)) {
+                        Long timestamp = daoValue.timestamp();
+
+                        if (daoValue.size() < 0){
+                            result.setDeleted(timestamp);
+                        }
+
+                        result.setValueTimestamp(timestamp);
+                        result.workingReplica();
+
+                    } catch (IllegalArgumentException e) {
+                        result.badArgument();
+                    } catch (NoSuchElementException e){
+                        result.notFound();
+                        result.workingReplica();
                     }
 
-                    addToListOfReplicasInMap(infoOfReplicasByTimestamp, timestamp, replicaHost);
-                    counts.working.plus();
-
-                } catch (IllegalArgumentException e) {
-                    sendEmptyResponse(HttpHelpers.STATUS_BAD_ARGUMENT);
-                    return false;
-                } catch (NoSuchElementException e){
-                    counts.working.plus();
-                    counts.notFound.plus();
-                }
+                    return result;
+                });
 
             } else {
 
-                futures.add(threadPool.addWork(() -> {
+                return threadPool.addWork(() -> {
 
-                    ResultOfDedicatedReplica result = new ResultOfDedicatedReplica();
+                    ResultOfReplicaAnswer result = new ResultOfReplicaAnswer(replicaHost);
 
                     try {
                         HttpQuery httpQuery = HttpQuery.Get(new URI(replicaHost + MyService.CONTEXT_ENTITY + "?" + httpExchange.getRequestURI().getQuery()));
@@ -103,20 +99,20 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
 
                         int valueSize = headQueryResult.getValueSize();
 
-                        counts.working.plus();
+                        result.workingReplica();
 
                         switch (headQueryResult.getStatusCode()) {
                             case HttpHelpers.STATUS_BAD_ARGUMENT:
-                                sendEmptyResponse(HttpHelpers.STATUS_BAD_ARGUMENT);
-                                return false;
+                                result.badArgument();
+                                break;
                             case HttpHelpers.STATUS_NOT_FOUND:
-                                counts.notFound.plus();
+                                result.notFound();
                                 break;
                             case HttpHelpers.STATUS_SUCCESS_GET:
                                 if (valueSize < 0){
-                                    setOfDeletedValuesByTimestamp.add(timestamp);
+                                    result.setDeleted(timestamp);
                                 }
-                                addToListOfReplicasInMap(infoOfReplicasByTimestamp, timestamp, replicaHost);
+                                result.setValueTimestamp(timestamp);
                                 break;
                         }
                     } catch (URISyntaxException e) {
@@ -127,23 +123,17 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
                         e.printStackTrace();
                     }
 
-                    return new ResultOfDedicatedReplica();
-                }));
-
+                    return result;
+                });
             }
-
-            return true;
         });
 
-        if (stopAnswer){
-            return;
-        }
-
-
-        if (counts.working.get() < replicaParameters.ack()){
+        if (results.getWorkingReplicas() < replicaParameters.ack()){
             sendEmptyResponse(HttpHelpers.STATUS_NOT_ENOUGH_REPLICAS);
             return;
         }
+
+        Map<Long, ListOfReplicas> infoOfReplicasByTimestamp = results.getInfoOfReplicasByTimestamp();
 
         int maxTimestampCount = -1;
         long timestampOfMaxCount = -1;
@@ -163,7 +153,8 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
             }
         }
 
-        if (setOfDeletedValuesByTimestamp.contains(maxTimestamp)){
+        Set<Long> deletedTimestamps = results.getDeletedTimestamps();
+        if (deletedTimestamps != null && deletedTimestamps.contains(maxTimestamp)){
             sendEmptyResponse(HttpHelpers.STATUS_NOT_FOUND);
             return;
         }
@@ -172,7 +163,8 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
 
         if (replicasWithNeedingValue == null){
             sendEmptyResponse(HttpHelpers.STATUS_NOT_FOUND);
-        } else if (replicasWithNeedingValue.size() >= replicaParameters.ack()) {
+//        } else if (replicasWithNeedingValue.size() >= replicaParameters.ack()) {
+        } else if (results.getWorkingReplicas() >= replicaParameters.ack()) {
             if (replicasWithNeedingValue.contains(myReplicaHost)) {
                 try (DAOValue daoValue = dao.get(id)) {
                     if (daoValue.size() < 0) {
@@ -213,191 +205,11 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
                     e.printStackTrace();
                 }
             }
-        } else if (counts.notFound.get() >= replicaParameters.ack()) {
+        } else if (results.getNotFound() >= replicaParameters.ack()) {
             sendEmptyResponse(HttpHelpers.STATUS_NOT_FOUND);
         } else {
             sendEmptyResponse(HttpHelpers.STATUS_NOT_ENOUGH_REPLICAS);
         }
-
-
     }
-
-    private void addToListOfReplicasInMap(Map<Long, ListOfReplicas> infoOfReplicasByTimestamp, Long timestamp, String replicaHost) {
-        ListOfReplicas listOfReplicas = infoOfReplicasByTimestamp.get(timestamp);
-        if (listOfReplicas == null) {
-            listOfReplicas = new ListOfReplicas();
-            infoOfReplicasByTimestamp.put(timestamp, listOfReplicas);
-        }
-        listOfReplicas.add(replicaHost);
-    }
-//
-//    @Override
-//    public void execute() throws IOException {
-//
-//        // запрос от клиента
-//        if (fromReplicas.empty()) {
-//
-//            List<String> listOfReplicasForRequest = findReplicas(id);
-//
-//            Map<Long, ListOfReplicas> infoOfReplicasByTimestamp = new HashMap<>();
-//            int countOfWorkingReplicas = 0;
-//            int notFoundCount = 0;
-//
-//            int from = replicaParameters.from();
-//
-//            for (int i = 0; i < from; i++) {
-//                String replicaHost = listOfReplicasForRequest.get(i);
-//
-//                if (replicaHost.equals(myReplicaHost)) {
-//
-//                    try (DAOValue daoValue = dao.get(id)) {
-//                        Long timestamp = daoValue.timestamp();
-//
-//                        ListOfReplicas listOfReplicas = infoOfReplicasByTimestamp.get(timestamp);
-//                        if (listOfReplicas == null) {
-//                            listOfReplicas = new ListOfReplicas();
-//                            infoOfReplicasByTimestamp.put(timestamp, listOfReplicas);
-//                        }
-//                        listOfReplicas.add(replicaHost);
-//                        countOfWorkingReplicas++;
-//
-//                    } catch (IllegalArgumentException e) {
-//                        sendEmptyResponse(HttpHelpers.STATUS_BAD_ARGUMENT);
-//                        return;
-//                    } catch (NoSuchElementException e){
-//                        countOfWorkingReplicas++;
-//                        notFoundCount++;
-//                    }
-//
-//                } else {
-//
-//                    try {
-//                        HttpQuery httpQuery = HttpQuery.Get(new URI(replicaHost + MyService.CONTEXT_ENTITY + "?" + httpExchange.getRequestURI().getQuery()));
-//
-//                        httpQuery.addReplicasToRequest(new ListOfReplicas(myReplicaHost));
-//                        httpQuery.addHeader(HttpHelpers.HEADER_GET_INFO, HttpHelpers.HEADER_GET_INFO_VALUE);
-//
-//                        HttpQueryResult headQueryResult = httpQuery.execute();
-//                        Long timestamp = headQueryResult.getTimestamp();
-//                        countOfWorkingReplicas++;
-//
-//                        switch (headQueryResult.getStatusCode()) {
-//                            case HttpHelpers.STATUS_BAD_ARGUMENT:
-//                                sendEmptyResponse(HttpHelpers.STATUS_BAD_ARGUMENT);
-//                                return;
-//                            case HttpHelpers.STATUS_NOT_FOUND:
-//                                notFoundCount++;
-//                                break;
-//                            case HttpHelpers.STATUS_SUCCESS_GET:
-//                                ListOfReplicas listOfReplicas = infoOfReplicasByTimestamp.get(timestamp);
-//                                if (listOfReplicas == null) {
-//                                    listOfReplicas = new ListOfReplicas();
-//                                    infoOfReplicasByTimestamp.put(timestamp, listOfReplicas);
-//                                }
-//                                listOfReplicas.add(replicaHost);
-//                                break;
-//                        }
-//                    } catch (URISyntaxException e) {
-//                        e.printStackTrace();
-//                        throw new IOException();
-//                    } catch (HttpHostConnectException e){
-//                        // nothing
-//                    }
-//                }
-//            }
-//
-//            if (countOfWorkingReplicas < replicaParameters.ack()){
-//                sendEmptyResponse(HttpHelpers.STATUS_NOT_ENOUGH_REPLICAS);
-//                return;
-//            }
-//
-//            int maxTimestampCount = -1;
-//            long timestampOfMaxCount = -1;
-//            for (Map.Entry<Long, ListOfReplicas> entry : infoOfReplicasByTimestamp.entrySet()) {
-//                int entryReplicasSize = entry.getValue().size();
-//                if (entryReplicasSize > maxTimestampCount) {
-//                    maxTimestampCount = entryReplicasSize;
-//                    timestampOfMaxCount = entry.getKey();
-//                }
-//            }
-//
-//            ListOfReplicas replicasWithNeedingValue = infoOfReplicasByTimestamp.get(timestampOfMaxCount);
-//
-//
-//            if (replicasWithNeedingValue == null){
-//                sendEmptyResponse(HttpHelpers.STATUS_NOT_FOUND);
-//            } else if (replicasWithNeedingValue.size() >= replicaParameters.ack()) {
-//                if (replicasWithNeedingValue.contains(myReplicaHost)) {
-//                    try (DAOValue daoValue = dao.get(id)) {
-//                        if (daoValue.size() < 0) {
-//                            sendEmptyResponse(HttpHelpers.STATUS_NOT_FOUND);
-//                        } else {
-//                            sendResponse(HttpHelpers.STATUS_SUCCESS_GET, daoValue.size(), daoValue.getInputStream());
-//                        }
-//                    } catch (IllegalArgumentException e) {
-//                        sendEmptyResponse(HttpHelpers.STATUS_BAD_ARGUMENT);
-//                    } catch (NoSuchElementException e){
-//                        sendEmptyResponse(HttpHelpers.STATUS_NOT_FOUND);
-//                    }
-//                } else {
-//                    String getFromReplica = replicasWithNeedingValue.toArray()[0];
-//
-//                    try {
-//                        HttpQuery getHttpQuery = HttpQuery.Get(new URI(getFromReplica + MyService.CONTEXT_ENTITY + "?" + httpExchange.getRequestURI().getQuery()));
-//                        getHttpQuery.addReplicasToRequest(new ListOfReplicas(myReplicaHost));
-//
-//                        HttpQueryResult getValueResult = getHttpQuery.execute();
-//
-//                        switch (getValueResult.getStatusCode()){
-//                            case HttpHelpers.STATUS_NOT_FOUND:
-//                                sendEmptyResponse(HttpHelpers.STATUS_NOT_FOUND);
-//                                break;
-//                            case HttpHelpers.STATUS_SUCCESS_GET:
-//                                sendResponse(HttpHelpers.STATUS_SUCCESS_GET, getValueResult.getSizeFromHeader(), getValueResult.getInputStream());
-//                                break;
-//                        }
-//
-//                    } catch (URISyntaxException e) {
-//                        e.printStackTrace();
-//                        throw new IOException();
-//                    } catch (HttpHostConnectException e){
-//                        System.out.println("eeeeeee"); // TODO
-//                        e.printStackTrace();
-//                    } catch (IOException e){
-//                        e.printStackTrace();
-//                    }
-//                }
-//            } else if (notFoundCount >= replicaParameters.ack()) {
-//                sendEmptyResponse(HttpHelpers.STATUS_NOT_FOUND);
-//            } else {
-//                sendEmptyResponse(HttpHelpers.STATUS_NOT_ENOUGH_REPLICAS);
-//            }
-//
-//        // запрос от реплики
-//        } else {
-//
-//            try (DAOValue value = dao.get(id)){
-//
-//                if (HttpHelpers.HEADER_GET_INFO_VALUE.equals(httpExchange.getRequestHeaders().getFirst(HttpHelpers.HEADER_GET_INFO))){
-//
-//                    Headers headers = httpExchange.getResponseHeaders();
-//                    headers.add(HttpHelpers.HEADER_TIMESTAMP, String.valueOf(value.timestamp()));
-//                    headers.add(HttpHelpers.HEADER_SIZE, String.valueOf(value.size()));
-//
-//                    sendEmptyResponse(HttpHelpers.STATUS_SUCCESS_GET);
-//                } else {
-//                    if (value.size() < 0){
-//                        sendEmptyResponse(HttpHelpers.STATUS_NOT_FOUND);
-//                    } else {
-//                        sendResponse(HttpHelpers.STATUS_SUCCESS_GET, value.size(), value.getInputStream());
-//                    }
-//                }
-//            } catch (NoSuchElementException e) {
-//                sendEmptyResponse(HttpHelpers.STATUS_NOT_FOUND);
-//            } catch (IllegalArgumentException e) {
-//                sendEmptyResponse(HttpHelpers.STATUS_BAD_ARGUMENT);
-//            }
-//        }
-//    }
 
 }

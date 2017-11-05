@@ -21,6 +21,9 @@ public class MyServiceParameters {
     private ListOfReplicas replicasHosts;
 
     @NotNull
+    private ThreadPoolReplicasQuerys threadPool;
+
+    @NotNull
     public ListOfReplicas getReplicasHosts() {
         return replicasHosts;
     }
@@ -60,6 +63,16 @@ public class MyServiceParameters {
     @NotNull
     public MyServiceParameters setHttpExchange(@NotNull HttpExchange httpExchange) {
         this.httpExchange = httpExchange;
+        return this;
+    }
+
+    @NotNull
+    public ThreadPoolReplicasQuerys getThreadPool() {
+        return threadPool;
+    }
+
+    public MyServiceParameters setThreadPool(@NotNull ThreadPoolReplicasQuerys threadPool) {
+        this.threadPool = threadPool;
         return this;
     }
 }

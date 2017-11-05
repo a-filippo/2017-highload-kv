@@ -29,6 +29,9 @@ public class MyService implements KVService {
     private final ListOfReplicas replicasHosts;
 
     @NotNull
+    private final ThreadPoolReplicasQuerys threadPool;
+
+    @NotNull
     private final String myReplicaHost;
 
     @NotNull
@@ -47,6 +50,8 @@ public class MyService implements KVService {
         this.replicasHosts = new ListOfReplicas(replicas);
         this.replicasHosts.remove(this.myReplicaHost);
 
+        this.threadPool = new ThreadPoolReplicasQuerys();
+
         try {
             this.httpServer.createContext("/v0/status", httpExchange -> {
                 final String response = "ONLINE";
@@ -60,6 +65,7 @@ public class MyService implements KVService {
                     MyServiceParameters myServiceParameters = new MyServiceParameters()
                             .setHttpExchange(httpExchange)
                             .setDao(dao)
+                            .setThreadPool(threadPool)
                             .setMyReplicaHost(myReplicaHost)
                             .setReplicasHosts(replicasHosts);
 

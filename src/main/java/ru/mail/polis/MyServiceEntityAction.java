@@ -3,15 +3,15 @@ package ru.mail.polis;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import org.apache.http.protocol.HTTP;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import com.sun.net.httpserver.HttpExchange;
 
@@ -28,7 +28,7 @@ abstract public class MyServiceEntityAction {
     protected final String id;
 
     @NotNull
-    protected final MyThreadPool threadPool;
+    protected final ThreadPoolReplicasQuerys threadPool;
 
     @NotNull
     protected final String myReplicaHost;
@@ -129,20 +129,31 @@ abstract public class MyServiceEntityAction {
         outputStream.close();
     }
 
-    protected boolean forEachNeedingReplica(ForEachReplicaInQueryFromClient forEachReplica) throws IOException {
+    protected ResultsOfReplicasAnswer forEachNeedingReplica(ForEachReplicaInQueryFromClient forEachReplica) throws IOException {
+        List<Future<ResultOfReplicaAnswer>> futures = new ArrayList<>();
         List<String> listOfReplicasForRequest = findReplicas(id);
 
         int from = replicaParameters.from();
 
         for (int i = 0; i < from; i++) {
-            if (!forEachReplica.execute(listOfReplicasForRequest.get(i))){
-                return true;
+            futures.add(forEachReplica.execute(listOfReplicasForRequest.get(i)));
+        }
+
+        List<ResultOfReplicaAnswer> listOfResults = new ArrayList<>();
+
+        for (Future<ResultOfReplicaAnswer> future : futures){
+            try {
+                listOfResults.add(future.get());
+            } catch (ExecutionException | InterruptedException e){
+                e.printStackTrace();
+                throw new IOException("Error with multithreading");
             }
         }
-        return false;
+
+        return new ResultsOfReplicasAnswer(listOfResults);
     }
 
     interface ForEachReplicaInQueryFromClient{
-        boolean execute(String replica) throws IOException;
+        Future<ResultOfReplicaAnswer> execute(String replica) throws IOException;
     }
 }
