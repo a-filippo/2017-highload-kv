@@ -29,12 +29,7 @@ public class MyService implements KVService {
     private final DAO dao;
 
     public MyService(int port, @NotNull DAO dao, Set<String> replicas) throws IOException {
-//        this.httpServer = HttpServer.create(new InetSocketAddress(port), 0);
-        this.httpServer = null;
-
-        StorageHttpServer storageHttpServer = new StorageHttpServer(port);
-
-
+        this.httpServer = HttpServer.create(new InetSocketAddress(port), 0);
         this.dao = dao;
 
         this.myReplicaHost = "http://localhost:" + port;
@@ -43,12 +38,8 @@ public class MyService implements KVService {
         this.replicasHosts.remove(this.myReplicaHost);
 
         this.threadPool = new ThreadPoolReplicasQuerys();
-        storageHttpServer.setDao(dao);
-        storageHttpServer.setMyReplicaHost(myReplicaHost);
-        storageHttpServer.setReplicasHosts(replicasHosts);
-        storageHttpServer.start();
 
-//        this.createRouters();
+        this.createRouters();
     }
 
     private void createRouters(){
@@ -114,12 +105,12 @@ public class MyService implements KVService {
     @Override
     public void start() {
         this.threadPool.start();
-//        this.httpServer.start();
+        this.httpServer.start();
     }
 
     @Override
     public void stop() {
-//        this.httpServer.stop(0);
+        this.httpServer.stop(0);
         this.threadPool.stop();
     }
 }

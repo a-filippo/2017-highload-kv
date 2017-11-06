@@ -21,9 +21,6 @@ dependencies {
     compile("commons-io:commons-io:2.5")
 
     compile("org.apache.httpcomponents:fluent-hc:4.5.3")
-
-    compile("org.nanohttpd:nanohttpd:2.3.1")
-
     testCompile("org.apache.httpcomponents:fluent-hc:4.5.3")
 
     // JUnit test framework
