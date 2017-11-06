@@ -17,6 +17,7 @@ import ru.mail.polis.IOHelpers;
 
 public class DerbyDAOModel implements DAOModel {
     private final String DB_URL;
+    private final String DB_CONNECTION_URL;
     private static final String TABLE_STORAGE = "STORAGE";
     private static final String COL_KEY = "storage_key";
     private static final String COL_VALUE = "storage_value";
@@ -38,9 +39,25 @@ public class DerbyDAOModel implements DAOModel {
             throw new SQLException("Error of creating tables");
         }
 
-        DB_URL = "jdbc:derby:" + dbPath + File.separator + folderOfDatabase + ";create=true";
+        DB_URL = dbPath + File.separator + folderOfDatabase;
+        DB_CONNECTION_URL = "jdbc:derby:" + DB_URL + ";create=true";
         createTable();
         prepareStatements();
+    }
+
+    public void stop() throws IOException {
+        try {
+            DriverManager.getConnection("jdbc:derby:" + DB_URL + ";shutdown=true");
+        } catch (SQLException e){
+            String state = e.getSQLState();
+            // 08006 connection with db closed
+            // XJ004 db not found
+            if (!state.equals("08006") &&
+                !state.equals("XJ004")){
+                e.printStackTrace();
+                throw new IOException();
+            }
+        }
     }
 
     private String createDatabaseFolderIfNeeding(String dbPath) throws IOException{
@@ -57,7 +74,7 @@ public class DerbyDAOModel implements DAOModel {
     }
 
     private Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(DB_URL);
+        return DriverManager.getConnection(DB_CONNECTION_URL);
     }
 
     private void createTable() throws SQLException {
