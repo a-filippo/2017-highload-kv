@@ -1,7 +1,6 @@
-package ru.mail.polis;
+package ru.mail.polis.myserviceentity;
 
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -13,6 +12,12 @@ import org.jetbrains.annotations.NotNull;
 
 import com.sun.net.httpserver.Headers;
 
+import ru.mail.polis.HttpHelpers;
+import ru.mail.polis.IllegalIdException;
+import ru.mail.polis.replicahelpers.ListOfReplicas;
+import ru.mail.polis.replicahelpers.ReplicaParametersException;
+import ru.mail.polis.replicahelpers.ResultOfReplicaAnswer;
+import ru.mail.polis.replicahelpers.ResultsOfReplicasAnswer;
 import ru.mail.polis.dao.DAOValue;
 import ru.mail.polis.httpclient.HttpQuery;
 import ru.mail.polis.httpclient.HttpQueryResult;
@@ -172,32 +177,7 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
                     sendEmptyResponse(HttpHelpers.STATUS_NOT_FOUND);
                 }
             } else {
-                String getFromReplica = replicasWithNeedingValue.toArray()[0];
-
-                try {
-                    HttpQuery getHttpQuery = HttpQuery.Get(sameQueryOnReplica(getFromReplica));
-                    getHttpQuery.addReplicasToRequest(new ListOfReplicas(myReplicaHost));
-
-                    HttpQueryResult getValueResult = getHttpQuery.execute();
-
-                    switch (getValueResult.getStatusCode()){
-                        case HttpHelpers.STATUS_NOT_FOUND:
-                            sendEmptyResponse(HttpHelpers.STATUS_NOT_FOUND);
-                            break;
-                        case HttpHelpers.STATUS_SUCCESS_GET:
-                            sendResponse(HttpHelpers.STATUS_SUCCESS_GET, getValueResult.getSizeFromHeader(), getValueResult.getInputStream());
-                            break;
-                    }
-
-                } catch (URISyntaxException e) {
-                    e.printStackTrace();
-                    throw new IOException();
-                } catch (HttpHostConnectException | ConnectTimeoutException e){
-                    // nothing // TODO
-                    e.printStackTrace();
-                } catch (IOException e){
-                    e.printStackTrace();
-                }
+                sendValueFromReplica(replicasWithNeedingValue.toArray(), 0);
             }
         } else if (results.getNotFound() >= replicaParameters.ack()) {
             sendEmptyResponse(HttpHelpers.STATUS_NOT_FOUND);
@@ -206,4 +186,27 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
         }
     }
 
+    private void sendValueFromReplica(String[] replicas, int numberOfReplica) throws IOException {
+        try {
+            HttpQuery getHttpQuery = HttpQuery.Get(sameQueryOnReplica(replicas[numberOfReplica]));
+            getHttpQuery.addReplicasToRequest(new ListOfReplicas(myReplicaHost));
+
+            HttpQueryResult getValueResult = getHttpQuery.execute();
+            switch (getValueResult.getStatusCode()){
+                case HttpHelpers.STATUS_NOT_FOUND:
+                    sendEmptyResponse(HttpHelpers.STATUS_NOT_FOUND);
+                    break;
+                case HttpHelpers.STATUS_SUCCESS_GET:
+                    sendResponse(HttpHelpers.STATUS_SUCCESS_GET, getValueResult.getSizeFromHeader(), getValueResult.getInputStream());
+                    break;
+            }
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+            throw new IOException();
+        } catch (HttpHostConnectException | ConnectTimeoutException e){
+            sendValueFromReplica(replicas, numberOfReplica + 1);
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+    }
 }

@@ -1,11 +1,10 @@
-package ru.mail.polis;
+package ru.mail.polis.replicahelpers;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.Spliterator;
-import java.util.function.Consumer;
 
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;

@@ -44,7 +44,10 @@ public class DAOStorage implements DAO {
         }
     }
 
-
+    @Override
+    public void stop() throws IOException{
+        modelValues.stop();
+    }
 
     @NotNull
     @Override

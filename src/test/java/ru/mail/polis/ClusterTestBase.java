@@ -17,7 +17,7 @@ abstract class ClusterTestBase extends TestBase {
     Set<String> endpoints;
 
     @NotNull
-    private String url(
+    String url(
             final int node,
             @NotNull final String id,
             final int ack,

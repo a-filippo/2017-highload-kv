@@ -1,13 +1,18 @@
-package ru.mail.polis;
+package ru.mail.polis.myserviceentity;
 
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
 
 import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.http.conn.HttpHostConnectException;
 import org.jetbrains.annotations.NotNull;
 
+import ru.mail.polis.HttpHelpers;
+import ru.mail.polis.IllegalIdException;
+import ru.mail.polis.replicahelpers.ListOfReplicas;
+import ru.mail.polis.replicahelpers.ReplicaParametersException;
+import ru.mail.polis.replicahelpers.ResultOfReplicaAnswer;
+import ru.mail.polis.replicahelpers.ResultsOfReplicasAnswer;
 import ru.mail.polis.httpclient.HttpQuery;
 import ru.mail.polis.httpclient.HttpQueryResult;
 

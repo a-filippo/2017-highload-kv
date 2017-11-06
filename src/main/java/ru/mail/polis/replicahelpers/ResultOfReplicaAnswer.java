@@ -1,4 +1,4 @@
-package ru.mail.polis;
+package ru.mail.polis.replicahelpers;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

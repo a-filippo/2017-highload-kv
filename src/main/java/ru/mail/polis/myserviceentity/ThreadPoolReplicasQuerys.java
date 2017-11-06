@@ -1,9 +1,11 @@
-package ru.mail.polis;
+package ru.mail.polis.myserviceentity;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import ru.mail.polis.replicahelpers.ResultOfReplicaAnswer;
 
 public class ThreadPoolReplicasQuerys {
     private ExecutorService executor;

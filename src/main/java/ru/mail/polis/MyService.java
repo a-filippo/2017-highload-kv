@@ -9,6 +9,13 @@ import org.jetbrains.annotations.NotNull;
 import com.sun.net.httpserver.HttpServer;
 
 import ru.mail.polis.dao.DAO;
+import ru.mail.polis.myserviceentity.MyServiceEntityDelete;
+import ru.mail.polis.myserviceentity.MyServiceEntityGet;
+import ru.mail.polis.myserviceentity.MyServiceEntityPut;
+import ru.mail.polis.myserviceentity.MyServiceParameters;
+import ru.mail.polis.myserviceentity.ThreadPoolReplicasQuerys;
+import ru.mail.polis.replicahelpers.ListOfReplicas;
+import ru.mail.polis.replicahelpers.ReplicaParametersException;
 
 public class MyService implements KVService {
     public final static String CONTEXT_ENTITY = "/v0/entity";
@@ -79,11 +86,6 @@ public class MyService implements KVService {
                             myServiceEntityDelete.execute();
                             break;
 
-                        case "HEAD":
-                            MyServiceEntityHead myServiceEntityHead = new MyServiceEntityHead(myServiceParameters);
-                            myServiceEntityHead.execute();
-                            break;
-
                         default:
                             httpExchange.sendResponseHeaders(HttpHelpers.STATUS_NOT_FOUND, 0);
                             httpExchange.getResponseBody().close();
@@ -110,6 +112,11 @@ public class MyService implements KVService {
 
     @Override
     public void stop() {
+        try {
+            dao.stop();
+        } catch (IOException e){
+            e.printStackTrace();
+        }
         this.httpServer.stop(0);
         this.threadPool.stop();
     }

@@ -1,4 +1,4 @@
-package ru.mail.polis;
+package ru.mail.polis.replicahelpers;
 
 import java.util.HashMap;
 import java.util.HashSet;

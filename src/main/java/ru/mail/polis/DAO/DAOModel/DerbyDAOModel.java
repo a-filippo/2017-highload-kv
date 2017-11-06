@@ -25,10 +25,10 @@ public class DerbyDAOModel implements DAOModel {
     private static final String COL_TIMESTAMP = "storage_timestamp";
     private static final String COL_SIZE = "storage_value_size";
 
-    private PreparedStatementStore GetRowPreparedStatementStore;
-    private PreparedStatementStore UpdateRowPreparedStatementStore;
-    private PreparedStatementStore InsertRowPreparedStatementStore;
-    private PreparedStatementStore GetPathRowPreparedStatementStore;
+    private PreparedStatementStore getRowPreparedStatementStore;
+    private PreparedStatementStore updateRowPreparedStatementStore;
+    private PreparedStatementStore insertRowPreparedStatementStore;
+    private PreparedStatementStore getPathRowPreparedStatementStore;
 
     public DerbyDAOModel(String dbPath) throws SQLException {
         String folderOfDatabase;
@@ -45,6 +45,7 @@ public class DerbyDAOModel implements DAOModel {
         prepareStatements();
     }
 
+    @Override
     public void stop() throws IOException {
         try {
             DriverManager.getConnection("jdbc:derby:" + DB_URL + ";shutdown=true");
@@ -107,7 +108,7 @@ public class DerbyDAOModel implements DAOModel {
     @Override
     public DAOModelValue getValue(@NotNull String key) throws IOException{
         try {
-            PreparedStatement preparedStatement = GetRowPreparedStatementStore.getStatement();
+            PreparedStatement preparedStatement = getRowPreparedStatementStore.getStatement();
             preparedStatement.setString(1, key);
             ResultSet rs = preparedStatement.executeQuery();
 
@@ -132,7 +133,7 @@ public class DerbyDAOModel implements DAOModel {
     @Override
     public String getPath(@NotNull String key) throws IOException {
         try {
-            PreparedStatement preparedStatement = GetPathRowPreparedStatementStore.getStatement();
+            PreparedStatement preparedStatement = getPathRowPreparedStatementStore.getStatement();
             preparedStatement.setString(1, key);
             ResultSet rs = preparedStatement.executeQuery();
             String path = rs.next() ? rs.getString(COL_PATH) : null;
@@ -148,7 +149,7 @@ public class DerbyDAOModel implements DAOModel {
     @Override
     public void putValue(@NotNull DAOModelValue value, boolean issetInStore) throws IOException {
         try {
-            PreparedStatementStore preparedStatementStore = issetInStore ? UpdateRowPreparedStatementStore : InsertRowPreparedStatementStore;
+            PreparedStatementStore preparedStatementStore = issetInStore ? updateRowPreparedStatementStore : insertRowPreparedStatementStore;
             PreparedStatement preparedStatement = preparedStatementStore.getStatement();
             preparedStatement.setBytes(1, value.getValue());
             preparedStatement.setInt(2, value.getSize());
@@ -165,7 +166,7 @@ public class DerbyDAOModel implements DAOModel {
     @Override
     public void deleteValue(@NotNull String key, long deleteTimestamp) throws IOException{
         try {
-            PreparedStatement preparedStatement = UpdateRowPreparedStatementStore.getStatement();
+            PreparedStatement preparedStatement = updateRowPreparedStatementStore.getStatement();
             preparedStatement.setBytes(1, new byte[0]);
             preparedStatement.setInt(2, -1);
             preparedStatement.setLong(3, deleteTimestamp);
@@ -179,7 +180,7 @@ public class DerbyDAOModel implements DAOModel {
     }
 
     private void prepareStatements() throws SQLException{
-        GetRowPreparedStatementStore = new PreparedStatementStore(
+        getRowPreparedStatementStore = new PreparedStatementStore(
             "SELECT " +
             COL_VALUE + ", " +
             COL_TIMESTAMP + ", " +
@@ -189,7 +190,7 @@ public class DerbyDAOModel implements DAOModel {
             COL_KEY + " = ?"
         );
 
-        UpdateRowPreparedStatementStore = new PreparedStatementStore(
+        updateRowPreparedStatementStore = new PreparedStatementStore(
             "UPDATE " +
             TABLE_STORAGE + " SET " +
             COL_VALUE + " = ?," +
@@ -199,14 +200,14 @@ public class DerbyDAOModel implements DAOModel {
             COL_KEY + " = ?"
         );
 
-        GetPathRowPreparedStatementStore = new PreparedStatementStore(
+        getPathRowPreparedStatementStore = new PreparedStatementStore(
             "select " +
             COL_PATH + " from " +
             TABLE_STORAGE + " where " +
             COL_KEY + " = ?"
         );
 
-        InsertRowPreparedStatementStore = new PreparedStatementStore(
+        insertRowPreparedStatementStore = new PreparedStatementStore(
             "INSERT INTO " +
             TABLE_STORAGE + " (" +
             COL_VALUE + ", " +

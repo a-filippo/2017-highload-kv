@@ -1,10 +1,11 @@
-package ru.mail.polis;
+package ru.mail.polis.myserviceentity;
 
 
 import org.jetbrains.annotations.NotNull;
 
 import com.sun.net.httpserver.HttpExchange;
 
+import ru.mail.polis.replicahelpers.ListOfReplicas;
 import ru.mail.polis.dao.DAO;
 
 public class MyServiceParameters {

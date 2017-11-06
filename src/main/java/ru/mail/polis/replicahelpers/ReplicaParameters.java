@@ -1,15 +1,15 @@
-package ru.mail.polis;
+package ru.mail.polis.replicahelpers;
 
 public class ReplicaParameters {
     private int ack;
     private int from;
-    ReplicaParameters(String parameters){
+    public ReplicaParameters(String parameters){
         String[] parameter = parameters.split("/");
         ack = Integer.parseInt(parameter[0]);
         from = Integer.parseInt(parameter[1]);
     }
 
-    ReplicaParameters(int ack, int from){
+    public ReplicaParameters(int ack, int from){
         this.ack = ack;
         this.from = from;
     }

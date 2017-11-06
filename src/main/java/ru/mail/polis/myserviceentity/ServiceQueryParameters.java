@@ -1,16 +1,20 @@
-package ru.mail.polis;
+package ru.mail.polis.myserviceentity;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-class ServiceQueryParameters {
+import ru.mail.polis.IllegalIdException;
+import ru.mail.polis.replicahelpers.ReplicaParameters;
+import ru.mail.polis.replicahelpers.ReplicaParametersException;
+
+public class ServiceQueryParameters {
     @Nullable
     private String id = null;
     @Nullable
     private ReplicaParameters replicaParameters = null;
 
     @NotNull
-    String getId() {
+    public String getId() {
         if (id == null){
             throw new IllegalArgumentException();
         }
@@ -18,7 +22,7 @@ class ServiceQueryParameters {
     }
 
     @NotNull
-    ReplicaParameters getReplicaParameters(int replicasCount) throws ReplicaParametersException {
+    public ReplicaParameters getReplicaParameters(int replicasCount) throws ReplicaParametersException {
         if (replicaParameters == null){
             return new ReplicaParameters(replicasCount / 2 + 1, replicasCount);
         } else if (
@@ -31,7 +35,7 @@ class ServiceQueryParameters {
         }
     }
 
-    ServiceQueryParameters(@NotNull String query) throws IllegalIdException {
+    public ServiceQueryParameters(@NotNull String query) throws IllegalIdException {
         String[] parameters = query.split("&");
         for (final String parameter : parameters){
             String[] parameterSplit = parameter.split("=");

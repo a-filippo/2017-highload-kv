@@ -6,6 +6,8 @@ import java.util.NoSuchElementException;
 import org.jetbrains.annotations.NotNull;
 
 public interface DAO {
+    void stop() throws IOException;
+
     @NotNull
     String getStoragePath();
 

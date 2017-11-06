@@ -1,4 +1,4 @@
-package ru.mail.polis;
+package ru.mail.polis.myserviceentity;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,6 +18,15 @@ import org.jetbrains.annotations.NotNull;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 
+import ru.mail.polis.HttpHelpers;
+import ru.mail.polis.IOHelpers;
+import ru.mail.polis.IllegalIdException;
+import ru.mail.polis.replicahelpers.ListOfReplicas;
+import ru.mail.polis.MyService;
+import ru.mail.polis.replicahelpers.ReplicaParameters;
+import ru.mail.polis.replicahelpers.ReplicaParametersException;
+import ru.mail.polis.replicahelpers.ResultOfReplicaAnswer;
+import ru.mail.polis.replicahelpers.ResultsOfReplicasAnswer;
 import ru.mail.polis.dao.DAO;
 
 abstract public class MyServiceEntityAction {

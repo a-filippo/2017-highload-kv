@@ -8,7 +8,6 @@ import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.InputStreamEntity;
@@ -17,7 +16,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.jetbrains.annotations.NotNull;
 
 import ru.mail.polis.HttpHelpers;
-import ru.mail.polis.ListOfReplicas;
+import ru.mail.polis.replicahelpers.ListOfReplicas;
 
 public class HttpQuery {
     private static final int TIMEOUT = 700;
@@ -26,26 +25,20 @@ public class HttpQuery {
 
     public HttpQuery(HttpRequestBase request) {
 
-        HttpClientBuilder b = HttpClientBuilder.create();
-        RequestConfig.Builder requestBuilder = RequestConfig.custom();
-        requestBuilder = requestBuilder.setConnectTimeout(TIMEOUT);
+        HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
+        RequestConfig.Builder requestBuilder = RequestConfig.custom()
+            .setConnectTimeout(TIMEOUT);
 
-        this.client = b
+        this.client = httpClientBuilder
             .disableAutomaticRetries()
             .setDefaultRequestConfig(requestBuilder.build())
             .build();
         this.request = request;
-
     }
 
     @NotNull
     public static HttpQuery Put(URI uri){
         return new HttpQuery(new HttpPut(uri));
-    }
-
-    @NotNull
-    public static HttpQuery Head(URI uri){
-        return new HttpQuery(new HttpHead(uri));
     }
 
     @NotNull
@@ -81,6 +74,5 @@ public class HttpQuery {
             throw new IllegalStateException(this.request.getMethod()
                     + " request cannot enclose an entity");
         }
-
     }
 }

@@ -2,12 +2,8 @@ package ru.mail.polis;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-
-import javax.sound.sampled.Port;
 
 /**
  * Starts storage and waits for shutdown
@@ -16,7 +12,6 @@ import javax.sound.sampled.Port;
  */
 public final class Server {
     private static final int[] PORTS = {8080, 8081, 8082, 8083};
-//    private static final int[] PORTS = {8080};
 
     private Server() {
         // Not instantiable
@@ -30,11 +25,11 @@ public final class Server {
         }
 
         for (final int port : PORTS){
-            startCluster(port, replicas);
+            startOneNode(port, replicas);
         }
     }
 
-    private static void startCluster(int port, Set<String> replicas) throws IOException{
+    private static void startOneNode(int port, Set<String> replicas) throws IOException{
         // Temporary storage in the file system
         final File data = Files.createTempDirectory();
 

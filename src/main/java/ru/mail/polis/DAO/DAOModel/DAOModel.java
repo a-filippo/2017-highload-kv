@@ -6,6 +6,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public interface DAOModel {
+    void stop() throws IOException;
+
     @Nullable
     DAOModelValue getValue(@NotNull String key) throws IOException;
 

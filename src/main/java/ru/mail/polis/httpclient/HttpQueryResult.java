@@ -4,14 +4,10 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.fluent.Response;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.protocol.HTTP;
 
 import ru.mail.polis.HttpHelpers;
-import ru.mail.polis.ListOfReplicas;
 
 public class HttpQueryResult {
     private CloseableHttpResponse response;
