@@ -27,11 +27,10 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
     public void processQueryFromReplica() throws IOException {
         try (DAOValue value = dao.get(id)){
 
-            if (HttpHelpers.HEADER_GET_INFO_VALUE.equals(getRequestHeaders().getFirst(HttpHelpers.HEADER_GET_INFO))){
+            if (HttpHelpers.HEADER_GET_INFO_VALUE.equals(getRequestHeader(HttpHelpers.HEADER_GET_INFO))){
 
-                Headers headers = getResponseHeaders();
-                headers.add(HttpHelpers.HEADER_TIMESTAMP, String.valueOf(value.timestamp()));
-                headers.add(HttpHelpers.HEADER_SIZE, String.valueOf(value.size()));
+                setResponseHeader(HttpHelpers.HEADER_TIMESTAMP, String.valueOf(value.timestamp()));
+                setResponseHeader(HttpHelpers.HEADER_SIZE, String.valueOf(value.size()));
 
                 sendEmptyResponse(HttpHelpers.STATUS_SUCCESS_GET);
             } else {

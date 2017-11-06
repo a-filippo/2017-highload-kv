@@ -2,23 +2,28 @@ package ru.mail.polis;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import org.apache.http.protocol.HTTP;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import com.sun.net.httpserver.Headers;
-import com.sun.net.httpserver.HttpExchange;
+//import com.sun.net.httpserver.Headers;
+//import com.sun.net.httpserver.HttpExchange;
 
+import fi.iki.elonen.NanoHTTPD;
 import ru.mail.polis.dao.DAO;
+
+//import static ru.mail.polis.HttpHelpers;
 
 abstract public class MyServiceEntityAction {
     @NotNull
@@ -37,7 +42,18 @@ abstract public class MyServiceEntityAction {
     protected final String myReplicaHost;
 
     @NotNull
-    private final HttpExchange httpExchange;
+    protected final ServiceQueryParameters serviceQueryParameters;
+
+    @NotNull
+    private NanoHTTPD.IHTTPSession session;
+
+    @Nullable
+    private NanoHTTPD.Response response;
+
+//    @NotNull
+//    private final HttpExchange httpExchange;
+
+    private Map<String, String> responseHeaders;
 
     @NotNull
     protected final ListOfReplicas replicasHosts;
@@ -53,37 +69,61 @@ abstract public class MyServiceEntityAction {
 
         this.dao = myServiceParameters.getDao();
         this.myReplicaHost = myServiceParameters.getMyReplicaHost();
-        this.httpExchange = myServiceParameters.getHttpExchange();
+        this.session = myServiceParameters.getSession();
+        //        this.httpExchange = myServiceParameters.getHttpExchange();
         this.replicasHosts = myServiceParameters.getReplicasHosts();
         this.threadPool = myServiceParameters.getThreadPool();
 
-        ServiceQueryParameters serviceQueryParameters = new ServiceQueryParameters(httpExchange.getRequestURI().getQuery());
+        this.serviceQueryParameters = new ServiceQueryParameters(session.getParameters());
         this.replicaParameters = serviceQueryParameters.getReplicaParameters(replicasHosts.size() + 1);
         this.id = serviceQueryParameters.getId();
 
-        this.fromReplicas = getFromReplicas(httpExchange);
+//        this.fromReplicas = getFromReplicas(httpExchange);
+        this.fromReplicas = getFromReplicas(session);
+
+        responseHeaders = new HashMap<>();
     }
 
-    final public void execute() throws IOException {
+    final public NanoHTTPD.Response execute() throws IOException {
         if (fromReplicas.empty()) {
             processQueryFromClient();
         } else {
             processQueryFromReplica();
         }
+
+        if (this.response == null){
+            sendEmptyResponse(HttpHelpers.STATUS_INTERNAL_ERROR);
+        }
+
+        for (Map.Entry<String, String> entry : responseHeaders.entrySet()) {
+            response.addHeader(entry.getKey(), entry.getValue());
+        }
+        return response;
     }
 
     public abstract void processQueryFromReplica() throws IOException;
 
     public abstract void processQueryFromClient() throws IOException;
 
+//    @NotNull
+//    private ListOfReplicas getFromReplicas(@NotNull HttpExchange httpExchange){
+//        String fromStorage = httpExchange.getRequestHeaders().getFirst(HttpHelpers.HEADER_FROM_REPLICAS);
+//        return new ListOfReplicas(fromStorage);
+//    }
+
     @NotNull
-    private ListOfReplicas getFromReplicas(@NotNull HttpExchange httpExchange){
-        String fromStorage = httpExchange.getRequestHeaders().getFirst(HttpHelpers.HEADER_FROM_REPLICAS);
+    private ListOfReplicas getFromReplicas(@NotNull NanoHTTPD.IHTTPSession session) {
+        String fromStorage = session.getHeaders().get(HttpHelpers.HEADER_FROM_REPLICAS);
         return new ListOfReplicas(fromStorage);
     }
 
+//    protected long getTimestamp(){
+//        String timestampString = httpExchange.getRequestHeaders().getFirst(HttpHelpers.HEADER_TIMESTAMP);
+//        return timestampString == null ? -1 : Long.valueOf(timestampString);
+//    }
+
     protected long getTimestamp(){
-        String timestampString = httpExchange.getRequestHeaders().getFirst(HttpHelpers.HEADER_TIMESTAMP);
+        String timestampString = session.getHeaders().get(HttpHelpers.HEADER_TIMESTAMP);
         return timestampString == null ? -1 : Long.valueOf(timestampString);
     }
 
@@ -103,22 +143,61 @@ abstract public class MyServiceEntityAction {
     }
 
     protected int getSize(){
-        return Integer.parseInt(httpExchange.getRequestHeaders().getFirst(HTTP.CONTENT_LEN));
+        String length = session.getHeaders().get(HTTP.CONTENT_LEN.toLowerCase());
+        if (length == null){
+            return 0;
+        } else {
+            return Integer.parseInt(length);
+        }
+//        return Integer.parseInt(httpExchange.getRequestHeaders().getFirst(HTTP.CONTENT_LEN));
     }
 
     protected void sendEmptyResponse(int status) throws IOException {
-        httpExchange.sendResponseHeaders(status, 0);
-        httpExchange.getResponseBody().close();
-        httpExchange.close();
+//        httpExchange.sendResponseHeaders(status, 0);
+//        httpExchange.getResponseBody().close();
+//        httpExchange.close();
+        response = NanoHTTPD.newFixedLengthResponse(getStatus(status), null, null);
+    }
+
+    private NanoHTTPD.Response.IStatus getStatus(int status){
+        switch (status){
+            case 200:
+                return NanoHTTPD.Response.Status.OK;
+            case 201:
+                return NanoHTTPD.Response.Status.CREATED;
+            case 202:
+                return NanoHTTPD.Response.Status.ACCEPTED;
+            case 400:
+                return NanoHTTPD.Response.Status.BAD_REQUEST;
+            case 404:
+                return NanoHTTPD.Response.Status.NOT_FOUND;
+            case 500:
+                return NanoHTTPD.Response.Status.INTERNAL_ERROR;
+            case 504:
+                return new NanoHTTPD.Response.IStatus() {
+                    @Override
+                    public String getDescription() {
+                        return "504 Gateway Timeout";
+                    }
+
+                    @Override
+                    public int getRequestStatus() {
+                        return 504;
+                    }
+                };
+            default:
+                return null;
+        }
     }
 
     protected void sendResponse(int status, int size, InputStream inputStream) throws IOException {
-        OutputStream outputStream = httpExchange.getResponseBody();
-        httpExchange.sendResponseHeaders(status, size);
-        IOHelpers.copy(inputStream, outputStream);
-        inputStream.close();
-        outputStream.close();
-        httpExchange.close();
+//        OutputStream outputStream = httpExchange.getResponseBody();
+//        httpExchange.sendResponseHeaders(status, size);
+//        IOHelpers.copy(inputStream, outputStream);
+//        inputStream.close();
+//        outputStream.close();
+//        httpExchange.close();
+        response = NanoHTTPD.newFixedLengthResponse(getStatus(status), null, inputStream, size);
     }
 
     protected ResultsOfReplicasAnswer forEachNeedingReplica(ForEachReplicaInQueryFromClient forEachReplica) throws IOException {
@@ -146,19 +225,25 @@ abstract public class MyServiceEntityAction {
     }
 
     protected InputStream getRequestInputStream(){
-        return httpExchange.getRequestBody();
+//        return httpExchange.getRequestBody();
+        return session.getInputStream();
     }
 
-    protected Headers getResponseHeaders(){
-        return httpExchange.getResponseHeaders();
+    protected void setResponseHeader(String key, String value){
+//        return httpExchange.getResponseHeaders();
+        responseHeaders.put(key, value);
     }
 
-    protected Headers getRequestHeaders(){
-        return httpExchange.getRequestHeaders();
+//    protected Headers getRequestHeaders(){
+//        return httpExchange.getRequestHeaders();
+//    }
+
+    protected String getRequestHeader(String value){
+        return session.getHeaders().get(value.toLowerCase());
     }
 
     protected URI sameQueryOnReplica(String replicaHost) throws URISyntaxException {
-        return new URI(replicaHost + MyService.CONTEXT_ENTITY + "?" + httpExchange.getRequestURI().getQuery());
+        return new URI(replicaHost + MyService.CONTEXT_ENTITY + "?" + serviceQueryParameters.getQuery());
     }
 
     interface ForEachReplicaInQueryFromClient{

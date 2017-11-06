@@ -1,5 +1,8 @@
 package ru.mail.polis;
 
+import java.util.List;
+import java.util.Map;
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -8,6 +11,26 @@ class ServiceQueryParameters {
     private String id = null;
     @Nullable
     private ReplicaParameters replicaParameters = null;
+
+    public ServiceQueryParameters(Map<String, List<String>> parameters) throws IllegalIdException {
+        for (Map.Entry<String, List<String>> entry : parameters.entrySet()) {
+            switch (entry.getKey()){
+                case "id":
+                    if (entry.getValue() == null || entry.getValue().isEmpty()){
+                        throw new IllegalIdException("id key is null");
+                    }
+                    id = entry.getValue().get(0);
+                    break;
+                case "replicas":
+                    if (entry.getValue() == null || entry.getValue().isEmpty()){
+                        break;
+                    }
+                    replicaParameters = new ReplicaParameters(entry.getValue().get(0));
+                    break;
+            }
+
+        }
+    }
 
     @NotNull
     String getId() {
@@ -28,6 +51,14 @@ class ServiceQueryParameters {
             throw new ReplicaParametersException("Ack: " + replicaParameters.ack() + ", from: " + replicaParameters.from());
         } else {
             return replicaParameters;
+        }
+    }
+
+    public String getQuery(){
+        if (replicaParameters == null){
+            return "id=" + id;
+        } else {
+            return "id=" + id + "&replicas=" + replicaParameters.ack() + "/" + replicaParameters.from();
         }
     }
 

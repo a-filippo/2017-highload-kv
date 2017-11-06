@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 
 import com.sun.net.httpserver.HttpExchange;
 
+import fi.iki.elonen.NanoHTTPD;
 import ru.mail.polis.dao.DAO;
 
 public class MyServiceParameters {
@@ -22,6 +23,9 @@ public class MyServiceParameters {
 
     @NotNull
     private ThreadPoolReplicasQuerys threadPool;
+
+    @NotNull
+    private NanoHTTPD.IHTTPSession session;
 
     @NotNull
     public ListOfReplicas getReplicasHosts() {
@@ -74,5 +78,15 @@ public class MyServiceParameters {
     public MyServiceParameters setThreadPool(@NotNull ThreadPoolReplicasQuerys threadPool) {
         this.threadPool = threadPool;
         return this;
+    }
+
+    public MyServiceParameters setSession(@NotNull NanoHTTPD.IHTTPSession session) {
+        this.session = session;
+        return this;
+    }
+
+    @NotNull
+    public NanoHTTPD.IHTTPSession getSession() {
+        return session;
     }
 }
