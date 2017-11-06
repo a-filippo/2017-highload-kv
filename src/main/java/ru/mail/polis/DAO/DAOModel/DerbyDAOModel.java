@@ -1,5 +1,6 @@
 package ru.mail.polis.dao.daomodel;
 
+import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -11,6 +12,8 @@ import java.sql.Statement;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import ru.mail.polis.IOHelpers;
 
 public class DerbyDAOModel implements DAOModel {
     private final String DB_URL;
@@ -25,12 +28,32 @@ public class DerbyDAOModel implements DAOModel {
     private PreparedStatementStore UpdateRowPreparedStatementStore;
     private PreparedStatementStore InsertRowPreparedStatementStore;
     private PreparedStatementStore GetPathRowPreparedStatementStore;
-//    private PreparedStatementStore DeleteRowPreparedStatementStore;
 
     public DerbyDAOModel(String dbPath) throws SQLException {
-        DB_URL = "jdbc:derby:" + dbPath + ";create=true";
+        String folderOfDatabase;
+        try {
+            folderOfDatabase = createDatabaseFolderIfNeeding(dbPath);
+        } catch (IOException e){
+            e.printStackTrace();
+            throw new SQLException("Error of creating tables");
+        }
+
+        DB_URL = "jdbc:derby:" + dbPath + File.separator + folderOfDatabase + ";create=true";
         createTable();
         prepareStatements();
+    }
+
+    private String createDatabaseFolderIfNeeding(String dbPath) throws IOException{
+        IOHelpers.createDirIfNoExists(dbPath);
+        File dir = new File(dbPath);
+        String[] files = dir.list();
+        String folderOfDatabase;
+        if (files.length == 0){
+            folderOfDatabase = String.valueOf(System.currentTimeMillis());
+        } else {
+            folderOfDatabase = files[0];
+        }
+        return folderOfDatabase;
     }
 
     private Connection getConnection() throws SQLException {
@@ -40,18 +63,20 @@ public class DerbyDAOModel implements DAOModel {
     private void createTable() throws SQLException {
         Connection connection = getConnection();
 
+
         DatabaseMetaData databaseMetaData = connection.getMetaData();
+
         ResultSet resultSet = databaseMetaData.getTables(null, "APP", TABLE_STORAGE, null);
         if (!resultSet.next()){
             Statement statement = connection.createStatement();
             statement.execute(
-                "CREATE TABLE "+TABLE_STORAGE+"(" +
-                COL_KEY+" VARCHAR (256) NOT NULL, " +
-                COL_VALUE+" blob (65536), " +
-                COL_PATH+" VARCHAR (256) NOT NULL, " +
-                COL_TIMESTAMP+" BIGINT NOT NULL, " +
-                COL_SIZE+" int NOT NULL" +
-                ")"
+            "CREATE TABLE "+TABLE_STORAGE+"(" +
+                    COL_KEY+" VARCHAR (256) NOT NULL, " +
+                    COL_VALUE+" blob (65536), " +
+                    COL_PATH+" VARCHAR (256) NOT NULL, " +
+                    COL_TIMESTAMP+" BIGINT NOT NULL, " +
+                    COL_SIZE+" int NOT NULL" +
+                    ")"
             );
 
             statement.execute("ALTER TABLE " + TABLE_STORAGE + " ADD PRIMARY KEY (" + COL_KEY + ")");
@@ -173,22 +198,6 @@ public class DerbyDAOModel implements DAOModel {
             COL_PATH + ", " +
             COL_KEY + ") values (?, ?, ?, ?, ?)"
         );
-
-//        DeleteRowPreparedStatementStore = new PreparedStatementStore(
-//            "DELETE FROM " +
-//            TABLE_STORAGE + " WHERE " +
-//            COL_KEY + " = ?"
-//        );
-
-//        DeleteRowPreparedStatementStore = new PreparedStatementStore(
-//            "UPDATE " +
-//                    TABLE_STORAGE + " SET " +
-//                    COL_VALUE + " = ?," +
-//                    COL_SIZE + " = ?," +
-//                    COL_TIMESTAMP + " = ?," +
-//                    COL_PATH + " = ? WHERE " +
-//                    COL_KEY + " = ?"
-//        );
     }
 
     private class PreparedStatementStore{

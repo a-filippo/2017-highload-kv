@@ -3,8 +3,8 @@ package ru.mail.polis;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.List;
 
+import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.http.conn.HttpHostConnectException;
 import org.jetbrains.annotations.NotNull;
 
@@ -60,7 +60,7 @@ public class MyServiceEntityDelete extends MyServiceEntityAction {
 
                     } catch (URISyntaxException e) {
                         e.printStackTrace();
-                    } catch (HttpHostConnectException e) {
+                    } catch (HttpHostConnectException | ConnectTimeoutException e){
                         // nothing
                     }
                     return result;

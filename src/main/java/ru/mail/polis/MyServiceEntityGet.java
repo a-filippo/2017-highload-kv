@@ -3,16 +3,11 @@ package ru.mail.polis;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
+import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.http.conn.HttpHostConnectException;
 import org.jetbrains.annotations.NotNull;
 
@@ -117,7 +112,7 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
                         }
                     } catch (URISyntaxException e) {
                         e.printStackTrace();
-                    } catch (HttpHostConnectException e){
+                    } catch (HttpHostConnectException | ConnectTimeoutException e){
                         // nothing
                     } catch (IOException e){
                         e.printStackTrace();
@@ -163,7 +158,6 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
 
         if (replicasWithNeedingValue == null){
             sendEmptyResponse(HttpHelpers.STATUS_NOT_FOUND);
-//        } else if (replicasWithNeedingValue.size() >= replicaParameters.ack()) {
         } else if (results.getWorkingReplicas() >= replicaParameters.ack()) {
             if (replicasWithNeedingValue.contains(myReplicaHost)) {
                 try (DAOValue daoValue = dao.get(id)) {
@@ -198,8 +192,8 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
                 } catch (URISyntaxException e) {
                     e.printStackTrace();
                     throw new IOException();
-                } catch (HttpHostConnectException e){
-                    System.out.println("eeeeeee"); // TODO
+                } catch (HttpHostConnectException | ConnectTimeoutException e){
+                    // nothing // TODO
                     e.printStackTrace();
                 } catch (IOException e){
                     e.printStackTrace();

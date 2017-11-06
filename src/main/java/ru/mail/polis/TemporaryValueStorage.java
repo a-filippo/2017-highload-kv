@@ -16,9 +16,6 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.jetbrains.annotations.Nullable;
 
-import com.sun.xml.internal.messaging.saaj.util.ByteInputStream;
-
-import jdk.internal.util.xml.impl.Input;
 import ru.mail.polis.dao.DAOValue;
 
 public class TemporaryValueStorage implements Closeable {

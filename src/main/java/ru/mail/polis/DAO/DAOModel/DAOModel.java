@@ -1,6 +1,5 @@
 package ru.mail.polis.dao.daomodel;
 
-import java.io.File;
 import java.io.IOException;
 
 import org.jetbrains.annotations.NotNull;

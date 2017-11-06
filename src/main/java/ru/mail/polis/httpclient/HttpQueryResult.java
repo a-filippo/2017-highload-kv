@@ -6,50 +6,40 @@ import java.io.InputStream;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.fluent.Response;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.protocol.HTTP;
 
 import ru.mail.polis.HttpHelpers;
 import ru.mail.polis.ListOfReplicas;
 
 public class HttpQueryResult {
-    private Response response;
-    private HttpResponse httpResponse;
+    private CloseableHttpResponse response;
 
-    HttpQueryResult(Response response) throws IOException {
+    HttpQueryResult(CloseableHttpResponse response) throws IOException {
         this.response = response;
-
-        this.httpResponse = response.returnResponse();
     }
 
     public int getStatusCode(){
-        return httpResponse.getStatusLine().getStatusCode();
-    }
-
-    public ListOfReplicas getListOfSuccessReplicas(){
-        String fromStorageString = httpResponse.getFirstHeader(HttpHelpers.HEADER_FROM_REPLICAS).getValue();
-        return new ListOfReplicas(fromStorageString);
+        return response.getStatusLine().getStatusCode();
     }
 
     public InputStream getInputStream() throws IOException {
-        return httpResponse.getEntity().getContent();
+        return response.getEntity().getContent();
     }
 
-//    public String getHash(){
-//        return httpResponse.getFirstHeader(HttpHelpers.HEADER_HASH_OF_VALUE).getValue();
-//    }
-
     public long getTimestamp(){
-        Header timestampHeader = httpResponse.getFirstHeader(HttpHelpers.HEADER_TIMESTAMP);
+        Header timestampHeader = response.getFirstHeader(HttpHelpers.HEADER_TIMESTAMP);
         return timestampHeader == null ? -1 : Long.valueOf(timestampHeader.getValue());
     }
 
     public int getSizeFromHeader(){
-        Header contentLengthHeader = httpResponse.getFirstHeader(HTTP.CONTENT_LEN);
+        Header contentLengthHeader = response.getFirstHeader(HTTP.CONTENT_LEN);
         return contentLengthHeader == null ? -1 : Integer.valueOf(contentLengthHeader.getValue());
     }
 
     public int getValueSize(){
-        Header valueSizeHeader = httpResponse.getFirstHeader(HttpHelpers.HEADER_SIZE);
+        Header valueSizeHeader = response.getFirstHeader(HttpHelpers.HEADER_SIZE);
         return valueSizeHeader == null ? -1 : Integer.valueOf(valueSizeHeader.getValue());
     }
 }

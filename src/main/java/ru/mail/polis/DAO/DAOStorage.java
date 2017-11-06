@@ -6,24 +6,14 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.Files;
-import java.nio.file.attribute.FileAttribute;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ThreadLocalRandom;
 
-import org.apache.commons.io.input.TeeInputStream;
 import org.jetbrains.annotations.NotNull;
 
 import ru.mail.polis.IOHelpers;
-import ru.mail.polis.SHA1;
 import ru.mail.polis.dao.daomodel.DAOModel;
 import ru.mail.polis.dao.daomodel.DAOModelValue;
 import ru.mail.polis.dao.daomodel.DerbyDAOModel;
@@ -44,8 +34,7 @@ public class DAOStorage implements DAO {
         HARD_STORAGE_FULL_PATH = rootPath + File.separator + HARD_STORAGE_FOLDER + File.separator;
         IOHelpers.createDirIfNoExists(HARD_STORAGE_FULL_PATH);
         IOHelpers.createDirIfNoExists(rootPath + File.separator + TEMP_PATH);
-//        Files.recursiveDelete
-        DB_FULL_PATH = rootPath + File.separator + DB_PATH;// + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE);
+        DB_FULL_PATH = rootPath + File.separator + DB_PATH;
 
         try {
             modelValues = new DerbyDAOModel(DB_FULL_PATH);
@@ -71,23 +60,15 @@ public class DAOStorage implements DAO {
         DAOModelValue value = modelValues.getValue(key);
 
         if (value != null){
-//            int size = value.getSizeFromHeader();
             String path = value.getPath();
             InputStream inputStream;
 
-//            DAOValue.HashCalculating hashCalculating;
-
             if (path.equals("")){
                 inputStream = new ByteArrayInputStream(value.getValue());
-//                hashCalculating = () -> SHA1.calculateHash(value.getValue());
             } else {
                 File file = new File(HARD_STORAGE_FULL_PATH + path);
                 inputStream = new FileInputStream(file);
-//                hashCalculating = () -> SHA1.calculateHash(file);
             }
-
-//            DAOValue daoValue = new DAOValue(inputStream, size);
-//            daoValue.addHashCalculating(hashCalculating);
 
             return new DAOValue(inputStream, value.getSize(), value.getTimestamp());
         } else {
@@ -111,19 +92,10 @@ public class DAOStorage implements DAO {
             DBpath = "";
             byteValue = new byte[size];
             inputStream.read(byteValue);
-//            value.setProxedInputStream(new ByteArrayInputStream(byteValue));
-
         } else {
             DBpath = key;
             byteValue = new byte[0];
-//            Path filePath = Paths.get(HARD_STORAGE_FULL_PATH + key);
-//            value.setProxedInputStream(
-//                new TeeInputStream(inputStream, new FileOutputStream(HARD_STORAGE_FULL_PATH + key))
-//            );
             IOHelpers.copy(inputStream, new FileOutputStream(HARD_STORAGE_FULL_PATH + key));
-//            value.setOutputStream(new FileOutputStream(HARD_STORAGE_FULL_PATH + key));
-//            InputStream proxedInputStream = new TeeInputStream(inputStream, fileOutputStream);
-//            Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
         }
 
         DAOModelValue modelValue = new DAOModelValue(key);

@@ -8,8 +8,12 @@ import java.util.concurrent.Future;
 public class ThreadPoolReplicasQuerys {
     private ExecutorService executor;
 
-    public ThreadPoolReplicasQuerys(){
+    public void start(){
         executor = Executors.newCachedThreadPool();
+    }
+
+    public void stop(){
+        executor.shutdown();
     }
 
     public Future<ResultOfReplicaAnswer> addWork(Callable<ResultOfReplicaAnswer> work){

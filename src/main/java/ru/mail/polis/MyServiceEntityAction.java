@@ -45,9 +45,6 @@ abstract public class MyServiceEntityAction {
     @NotNull
     protected final ListOfReplicas fromReplicas;
 
-//    @Nullable
-//    protected final String nextReplica;
-
     public MyServiceEntityAction(@NotNull MyServiceParameters myServiceParameters) throws ReplicaParametersException, IllegalIdException {
         this.myServiceParameters = myServiceParameters;
 
@@ -62,8 +59,6 @@ abstract public class MyServiceEntityAction {
         this.id = serviceQueryParameters.getId();
 
         this.fromReplicas = getFromReplicas(httpExchange);
-
-//        this.nextReplica = findNextReplica(id);
     }
 
     final public void execute() throws IOException {
@@ -83,14 +78,6 @@ abstract public class MyServiceEntityAction {
         String fromStorage = httpExchange.getRequestHeaders().getFirst(HttpHelpers.HEADER_FROM_REPLICAS);
         return new ListOfReplicas(fromStorage);
     }
-
-//    @Nullable
-//    private String findNextReplica(String key){
-//        if (fromReplicas.size() < replicaParameters.from() - 1){
-//            return findReplicas(key).get(0);
-//        }
-//        return null;
-//    }
 
     protected long getTimestamp(){
         String timestampString = httpExchange.getRequestHeaders().getFirst(HttpHelpers.HEADER_TIMESTAMP);
@@ -119,6 +106,7 @@ abstract public class MyServiceEntityAction {
     protected void sendEmptyResponse(int status) throws IOException {
         httpExchange.sendResponseHeaders(status, 0);
         httpExchange.getResponseBody().close();
+        httpExchange.close();
     }
 
     protected void sendResponse(int status, int size, InputStream inputStream) throws IOException {
@@ -127,6 +115,7 @@ abstract public class MyServiceEntityAction {
         IOHelpers.copy(inputStream, outputStream);
         inputStream.close();
         outputStream.close();
+        httpExchange.close();
     }
 
     protected ResultsOfReplicasAnswer forEachNeedingReplica(ForEachReplicaInQueryFromClient forEachReplica) throws IOException {

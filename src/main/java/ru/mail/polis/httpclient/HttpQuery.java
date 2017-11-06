@@ -4,55 +4,58 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 
-import org.apache.http.client.fluent.Content;
-import org.apache.http.client.fluent.Request;
-import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.HttpEntityEnclosingRequest;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.methods.HttpHead;
+import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.jetbrains.annotations.NotNull;
 
 import ru.mail.polis.HttpHelpers;
 import ru.mail.polis.ListOfReplicas;
 
 public class HttpQuery {
+    private static final int TIMEOUT = 700;
+    protected HttpRequestBase request;
+    protected CloseableHttpClient client;
 
-//    protected static HttpQueryPool httpQueryPool;
-    protected Request request;
-//    private CompleteResponse completeResponse = null;
-//
-//    public static void setHttpQueryPool(HttpQueryPool httpQueryPool){
-//        HttpQuery.httpQueryPool = httpQueryPool;
-//    }
+    public HttpQuery(HttpRequestBase request) {
 
-    public HttpQuery(Request request) {
-//        DefaultHttpClient
-//        HttpClientBuilder b = HttpClientBuilder.create();
-//        CloseableHttpClient client = b.disableAutomaticRetries().build();
-//        HttpUriRequest request1 = new HttpGet();
-//        CloseableHttpResponse response = client.execute(request1);
-//        response.
+        HttpClientBuilder b = HttpClientBuilder.create();
+        RequestConfig.Builder requestBuilder = RequestConfig.custom();
+        requestBuilder = requestBuilder.setConnectTimeout(TIMEOUT);
 
-
-
+        this.client = b
+            .disableAutomaticRetries()
+            .setDefaultRequestConfig(requestBuilder.build())
+            .build();
         this.request = request;
+
     }
 
+    @NotNull
     public static HttpQuery Put(URI uri){
-        return new HttpQuery(Request.Put(uri));
+        return new HttpQuery(new HttpPut(uri));
     }
 
+    @NotNull
     public static HttpQuery Head(URI uri){
-        return new HttpQuery(Request.Head(uri));
+        return new HttpQuery(new HttpHead(uri));
     }
 
+    @NotNull
     public static HttpQuery Get(URI uri){
-        return new HttpQuery(Request.Get(uri));
+        return new HttpQuery(new HttpGet(uri));
     }
+
+    @NotNull
     public static HttpQuery Delete(URI uri){
-        return new HttpQuery(Request.Delete(uri));
+        return new HttpQuery(new HttpDelete(uri));
     }
 
     public void addHeader(String key, String value){
@@ -60,7 +63,7 @@ public class HttpQuery {
     }
 
     public HttpQueryResult execute() throws IOException {
-        return new HttpQueryResult(request.execute());
+        return new HttpQueryResult(client.execute(request));
     }
 
     public void addReplicasToRequest(ListOfReplicas replicas){
@@ -72,14 +75,12 @@ public class HttpQuery {
     }
 
     public void setBody(InputStream inputStream, int size) throws IOException {
-        request.body(new InputStreamEntity(inputStream, (long)size));
-    }
+        if (this.request instanceof HttpEntityEnclosingRequest) {
+            ((HttpEntityEnclosingRequest) this.request).setEntity(new InputStreamEntity(inputStream, (long)size));
+        } else {
+            throw new IllegalStateException(this.request.getMethod()
+                    + " request cannot enclose an entity");
+        }
 
-//    public void addSize(int size){
-//        addHeader(HttpHelpers.HEADER_SIZE, String.valueOf(size));
-//    }
-
-    interface CompleteResponse{
-        void action(Content content);
     }
 }

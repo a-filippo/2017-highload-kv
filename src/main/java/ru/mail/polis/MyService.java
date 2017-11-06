@@ -5,11 +5,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Set;
 
-
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
-import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
 import ru.mail.polis.dao.DAO;
@@ -19,11 +15,6 @@ public class MyService implements KVService {
 
     @NotNull
     private final HttpServer httpServer;
-
-//    private final int replicasCount;
-
-//    @NotNull
-//    private final ReplicaParameters defaultReplicaParameters;
 
     @NotNull
     private final ListOfReplicas replicasHosts;
@@ -41,18 +32,19 @@ public class MyService implements KVService {
         this.httpServer = HttpServer.create(new InetSocketAddress(port), 0);
         this.dao = dao;
 
-//        HttpQuery.setHttpQueryPool(new HttpQueryPool());
-
         this.myReplicaHost = "http://localhost:" + port;
 
-//        this.replicasCount = replicas.size();
-//        this.defaultReplicaParameters = getDefaultReplicas(this.replicasCount);
         this.replicasHosts = new ListOfReplicas(replicas);
         this.replicasHosts.remove(this.myReplicaHost);
 
         this.threadPool = new ThreadPoolReplicasQuerys();
 
+        this.createRouters();
+    }
+
+    private void createRouters(){
         try {
+
             this.httpServer.createContext("/v0/status", httpExchange -> {
                 final String response = "ONLINE";
                 httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS, response.length());
@@ -62,6 +54,8 @@ public class MyService implements KVService {
 
             this.httpServer.createContext(CONTEXT_ENTITY, httpExchange -> {
                 try {
+                    System.out.println(httpExchange.getRequestHeaders().values().toString());
+
                     MyServiceParameters myServiceParameters = new MyServiceParameters()
                             .setHttpExchange(httpExchange)
                             .setDao(dao)
@@ -69,14 +63,6 @@ public class MyService implements KVService {
                             .setMyReplicaHost(myReplicaHost)
                             .setReplicasHosts(replicasHosts);
 
-
-//                    ServiceQueryParameters parameters = new ServiceQueryParameters(httpExchange.getRequestURI().getQuery());
-//                    final String id = parameters.getId();
-//                    ReplicaParameters replicaParameters = parameters.getReplicaParameters();
-//
-//                    ListOfReplicas fromReplicas = getFromReplicas(httpExchange);
-//                    String nextReplica = findNextReplica(fromReplicas, replicaParameters);
-                    System.out.println(httpExchange.getRequestHeaders().values().toString());
                     switch (httpExchange.getRequestMethod()) {
                         case "GET":
                             MyServiceEntityGet myServiceEntityGet = new MyServiceEntityGet(myServiceParameters);
@@ -101,14 +87,15 @@ public class MyService implements KVService {
                         default:
                             httpExchange.sendResponseHeaders(HttpHelpers.STATUS_NOT_FOUND, 0);
                             httpExchange.getResponseBody().close();
+                            httpExchange.close();
                     }
                 } catch (IllegalIdException | ReplicaParametersException e){
                     httpExchange.sendResponseHeaders(HttpHelpers.STATUS_BAD_ARGUMENT, 0);
                     httpExchange.getResponseBody().close();
+                    httpExchange.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-
             });
         } catch (Exception e){
             e.printStackTrace();
@@ -117,33 +104,13 @@ public class MyService implements KVService {
 
     @Override
     public void start() {
+        this.threadPool.start();
         this.httpServer.start();
     }
 
     @Override
     public void stop() {
         this.httpServer.stop(0);
-    }
-
-    @NotNull
-    private ListOfReplicas getFromReplicas(@NotNull HttpExchange httpExchange){
-        String fromStorage = httpExchange.getRequestHeaders().getFirst(HttpHelpers.HEADER_FROM_REPLICAS);
-        return new ListOfReplicas(fromStorage);
-    }
-
-    @Nullable
-    private String findNextReplica(ListOfReplicas fromReplicas, ReplicaParameters parameters){
-        if (fromReplicas.size() < parameters.from() - 1){
-            for (String replicaHost : replicasHosts){
-                if (!fromReplicas.contains(replicaHost)){
-                    return replicaHost;
-                }
-            }
-        }
-        return null;
-    }
-
-    private ReplicaParameters getDefaultReplicas(int clusterSize){
-        return new ReplicaParameters(clusterSize / 2 + 1, clusterSize);
+        this.threadPool.stop();
     }
 }
