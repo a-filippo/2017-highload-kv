@@ -24,7 +24,7 @@ public class MyServiceEntityPut extends MyServiceEntityAction {
 
     @Override
     public void processQueryFromReplica() throws IOException {
-        try (DAOValue value = new DAOValue(httpExchange.getRequestBody(), getSize(), getTimestamp())) {
+        try (DAOValue value = new DAOValue(getRequestInputStream(), getSize(), getTimestamp())) {
             dao.put(id, value);
             sendEmptyResponse(HttpHelpers.STATUS_SUCCESS_PUT);
         }
@@ -37,7 +37,7 @@ public class MyServiceEntityPut extends MyServiceEntityAction {
 
         TemporaryValueStorage temporaryValueStorage = new TemporaryValueStorage(
                 dao.getStoragePath() + File.separator + DAOStorage.TEMP_PATH,
-                httpExchange.getRequestBody(),
+                getRequestInputStream(),
                 size
             );
 
@@ -61,7 +61,7 @@ public class MyServiceEntityPut extends MyServiceEntityAction {
                     ResultOfReplicaAnswer result = new ResultOfReplicaAnswer(myReplicaHost);
 
                     try {
-                        HttpQuery putHttpQuery = HttpQuery.Put(new URI(replicaHost + MyService.CONTEXT_ENTITY + "?" + httpExchange.getRequestURI().getQuery()));
+                        HttpQuery putHttpQuery = HttpQuery.Put(sameQueryOnReplica(replicaHost));
                         putHttpQuery.addReplicasToRequest(new ListOfReplicas(myReplicaHost));
                         putHttpQuery.addTimestamp(timestamp);
 

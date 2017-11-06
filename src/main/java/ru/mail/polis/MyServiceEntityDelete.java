@@ -20,11 +20,9 @@ public class MyServiceEntityDelete extends MyServiceEntityAction {
     public void processQueryFromReplica() throws IOException {
         try {
             dao.delete(id, getTimestamp());
-            httpExchange.sendResponseHeaders(HttpHelpers.STATUS_SUCCESS_DELETE, 0);
-            httpExchange.getResponseBody().close();
+            sendEmptyResponse(HttpHelpers.STATUS_SUCCESS_DELETE);
         } catch (IllegalArgumentException e) {
-            httpExchange.sendResponseHeaders(HttpHelpers.STATUS_BAD_ARGUMENT, 0);
-            httpExchange.getResponseBody().close();
+            sendEmptyResponse(HttpHelpers.STATUS_BAD_ARGUMENT);
         }
     }
 
@@ -46,7 +44,7 @@ public class MyServiceEntityDelete extends MyServiceEntityAction {
                 return threadPool.addWork(() -> {
                     ResultOfReplicaAnswer result = new ResultOfReplicaAnswer(myReplicaHost);
                     try {
-                        HttpQuery deleteHttpQuery = HttpQuery.Delete(new URI(replicaHost + MyService.CONTEXT_ENTITY + "?" + httpExchange.getRequestURI().getQuery()));
+                        HttpQuery deleteHttpQuery = HttpQuery.Delete(sameQueryOnReplica(replicaHost));
 
                         deleteHttpQuery.addReplicasToRequest(new ListOfReplicas(myReplicaHost));
                         deleteHttpQuery.addTimestamp(timestamp);

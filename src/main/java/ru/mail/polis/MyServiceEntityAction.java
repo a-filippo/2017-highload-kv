@@ -3,6 +3,8 @@ package ru.mail.polis;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -13,6 +15,7 @@ import java.util.concurrent.Future;
 import org.apache.http.protocol.HTTP;
 import org.jetbrains.annotations.NotNull;
 
+import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 
 import ru.mail.polis.dao.DAO;
@@ -34,7 +37,7 @@ abstract public class MyServiceEntityAction {
     protected final String myReplicaHost;
 
     @NotNull
-    protected final HttpExchange httpExchange;
+    private final HttpExchange httpExchange;
 
     @NotNull
     protected final ListOfReplicas replicasHosts;
@@ -140,6 +143,22 @@ abstract public class MyServiceEntityAction {
         }
 
         return new ResultsOfReplicasAnswer(listOfResults);
+    }
+
+    protected InputStream getRequestInputStream(){
+        return httpExchange.getRequestBody();
+    }
+
+    protected Headers getResponseHeaders(){
+        return httpExchange.getResponseHeaders();
+    }
+
+    protected Headers getRequestHeaders(){
+        return httpExchange.getRequestHeaders();
+    }
+
+    protected URI sameQueryOnReplica(String replicaHost) throws URISyntaxException {
+        return new URI(replicaHost + MyService.CONTEXT_ENTITY + "?" + httpExchange.getRequestURI().getQuery());
     }
 
     interface ForEachReplicaInQueryFromClient{

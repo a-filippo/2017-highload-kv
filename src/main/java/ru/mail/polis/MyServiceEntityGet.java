@@ -27,9 +27,9 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
     public void processQueryFromReplica() throws IOException {
         try (DAOValue value = dao.get(id)){
 
-            if (HttpHelpers.HEADER_GET_INFO_VALUE.equals(httpExchange.getRequestHeaders().getFirst(HttpHelpers.HEADER_GET_INFO))){
+            if (HttpHelpers.HEADER_GET_INFO_VALUE.equals(getRequestHeaders().getFirst(HttpHelpers.HEADER_GET_INFO))){
 
-                Headers headers = httpExchange.getResponseHeaders();
+                Headers headers = getResponseHeaders();
                 headers.add(HttpHelpers.HEADER_TIMESTAMP, String.valueOf(value.timestamp()));
                 headers.add(HttpHelpers.HEADER_SIZE, String.valueOf(value.size()));
 
@@ -84,7 +84,7 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
                     ResultOfReplicaAnswer result = new ResultOfReplicaAnswer(replicaHost);
 
                     try {
-                        HttpQuery httpQuery = HttpQuery.Get(new URI(replicaHost + MyService.CONTEXT_ENTITY + "?" + httpExchange.getRequestURI().getQuery()));
+                        HttpQuery httpQuery = HttpQuery.Get(sameQueryOnReplica(replicaHost));
 
                         httpQuery.addReplicasToRequest(new ListOfReplicas(myReplicaHost));
                         httpQuery.addHeader(HttpHelpers.HEADER_GET_INFO, HttpHelpers.HEADER_GET_INFO_VALUE);
@@ -175,7 +175,7 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
                 String getFromReplica = replicasWithNeedingValue.toArray()[0];
 
                 try {
-                    HttpQuery getHttpQuery = HttpQuery.Get(new URI(getFromReplica + MyService.CONTEXT_ENTITY + "?" + httpExchange.getRequestURI().getQuery()));
+                    HttpQuery getHttpQuery = HttpQuery.Get(sameQueryOnReplica(getFromReplica));
                     getHttpQuery.addReplicasToRequest(new ListOfReplicas(myReplicaHost));
 
                     HttpQueryResult getValueResult = getHttpQuery.execute();
