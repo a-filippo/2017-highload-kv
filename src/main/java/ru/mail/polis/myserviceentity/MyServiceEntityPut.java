@@ -66,7 +66,7 @@ public class MyServiceEntityPut extends MyServiceEntityAction {
                     ResultOfReplicaAnswer result = new ResultOfReplicaAnswer(myReplicaHost);
 
                     try {
-                        HttpQuery putHttpQuery = HttpQuery.Put(sameQueryOnReplica(replicaHost));
+                        HttpQuery putHttpQuery = httpQueryCreator.put(sameQueryOnReplica(replicaHost));
                         putHttpQuery.addReplicasToRequest(new ListOfReplicas(myReplicaHost));
                         putHttpQuery.addTimestamp(timestamp);
 
@@ -83,6 +83,7 @@ public class MyServiceEntityPut extends MyServiceEntityAction {
                                 break;
                         }
 
+                        httpQueryResult.close();
                     } catch (URISyntaxException e) {
                         e.printStackTrace();
                     } catch (HttpHostConnectException | ConnectTimeoutException e){

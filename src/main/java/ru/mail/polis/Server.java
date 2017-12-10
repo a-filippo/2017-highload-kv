@@ -11,7 +11,7 @@ import java.util.Set;
  * @author Vadim Tsesko <mail@incubos.org>
  */
 public final class Server {
-    private static final int[] PORTS = {8080, 8081, 8082, 8083};
+    private static final int[] PORTS = {8080, 8081, 8082};
 
     private Server() {
         // Not instantiable

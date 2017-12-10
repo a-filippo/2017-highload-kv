@@ -9,7 +9,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.LinkedList;
 
+import org.apache.derby.jdbc.EmbeddedDataSource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,7 +19,9 @@ import ru.mail.polis.IOHelpers;
 
 public class DerbyDAOModel implements DAOModel {
     private final String DB_URL;
-    private final String DB_CONNECTION_URL;
+
+    private MySQLPool mySQLPool;
+
     private static final String TABLE_STORAGE = "STORAGE";
     private static final String COL_KEY = "storage_key";
     private static final String COL_VALUE = "storage_value";
@@ -40,7 +44,13 @@ public class DerbyDAOModel implements DAOModel {
         }
 
         DB_URL = dbPath + File.separator + folderOfDatabase;
-        DB_CONNECTION_URL = "jdbc:derby:" + DB_URL + ";create=true";
+
+        EmbeddedDataSource dataSource = new EmbeddedDataSource();
+        dataSource.setDatabaseName(DB_URL);
+        dataSource.setCreateDatabase("create");
+
+        mySQLPool = new MySQLPool(dataSource);
+
         createTable();
         prepareStatements();
     }
@@ -74,12 +84,8 @@ public class DerbyDAOModel implements DAOModel {
         return folderOfDatabase;
     }
 
-    private Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(DB_CONNECTION_URL);
-    }
-
     private void createTable() throws SQLException {
-        Connection connection = getConnection();
+        Connection connection = mySQLPool.retrieve();
 
 
         DatabaseMetaData databaseMetaData = connection.getMetaData();
@@ -101,14 +107,15 @@ public class DerbyDAOModel implements DAOModel {
             statement.close();
         }
 
-        connection.close();
+        mySQLPool.putback(connection);
     }
 
     @Nullable
     @Override
     public DAOModelValue getValue(@NotNull String key) throws IOException{
+        PreparedStatement preparedStatement = null;
         try {
-            PreparedStatement preparedStatement = getRowPreparedStatementStore.getStatement();
+            preparedStatement = getRowPreparedStatementStore.getStatement();
             preparedStatement.setString(1, key);
             ResultSet rs = preparedStatement.executeQuery();
 
@@ -126,14 +133,17 @@ public class DerbyDAOModel implements DAOModel {
             }
         } catch (SQLException e){
             throw new IOException();
+        } finally {
+            getRowPreparedStatementStore.putback(preparedStatement);
         }
     }
 
     @Nullable
     @Override
     public String getPath(@NotNull String key) throws IOException {
+        PreparedStatement preparedStatement = null;
         try {
-            PreparedStatement preparedStatement = getPathRowPreparedStatementStore.getStatement();
+            preparedStatement = getPathRowPreparedStatementStore.getStatement();
             preparedStatement.setString(1, key);
             ResultSet rs = preparedStatement.executeQuery();
             String path = rs.next() ? rs.getString(COL_PATH) : null;
@@ -143,14 +153,17 @@ public class DerbyDAOModel implements DAOModel {
         } catch (SQLException e){
             e.printStackTrace();
             throw new IOException();
+        } finally {
+            getPathRowPreparedStatementStore.putback(preparedStatement);
         }
     }
 
     @Override
     public void putValue(@NotNull DAOModelValue value, boolean issetInStore) throws IOException {
+        PreparedStatementStore preparedStatementStore = issetInStore ? updateRowPreparedStatementStore : insertRowPreparedStatementStore;
+        PreparedStatement preparedStatement = null;
         try {
-            PreparedStatementStore preparedStatementStore = issetInStore ? updateRowPreparedStatementStore : insertRowPreparedStatementStore;
-            PreparedStatement preparedStatement = preparedStatementStore.getStatement();
+            preparedStatement = preparedStatementStore.getStatement();
             preparedStatement.setBytes(1, value.getValue());
             preparedStatement.setInt(2, value.getSize());
             preparedStatement.setLong(3, value.getTimestamp());
@@ -158,15 +171,22 @@ public class DerbyDAOModel implements DAOModel {
             preparedStatement.setString(5, value.getKey());
             preparedStatement.executeUpdate();
         } catch (SQLException e){
-            e.printStackTrace();
-            throw new IOException();
+            if (e.getSQLState().equals("23505")){
+                putValue(value, true);
+            } else {
+                e.printStackTrace();
+                throw new IOException();
+            }
+        } finally {
+            preparedStatementStore.putback(preparedStatement);
         }
     }
 
     @Override
     public void deleteValue(@NotNull String key, long deleteTimestamp) throws IOException{
+        PreparedStatement preparedStatement = null;
         try {
-            PreparedStatement preparedStatement = updateRowPreparedStatementStore.getStatement();
+            preparedStatement = updateRowPreparedStatementStore.getStatement();
             preparedStatement.setBytes(1, new byte[0]);
             preparedStatement.setInt(2, -1);
             preparedStatement.setLong(3, deleteTimestamp);
@@ -176,6 +196,8 @@ public class DerbyDAOModel implements DAOModel {
         } catch (SQLException e){
             e.printStackTrace();
             throw new IOException();
+        } finally {
+            updateRowPreparedStatementStore.putback(preparedStatement);
         }
     }
 
@@ -219,22 +241,34 @@ public class DerbyDAOModel implements DAOModel {
     }
 
     private class PreparedStatementStore{
-        private PreparedStatement preparedStatement;
+        private LinkedList<PreparedStatement> availableStatements;
         private String query;
 
         PreparedStatementStore(String query){
             this.query = query;
+            this.availableStatements = new LinkedList<>();
         }
 
-        PreparedStatement getStatement() throws SQLException {
-            if (preparedStatement == null || preparedStatement.isClosed()){
-                preparedStatement = generatePreparedStatement();
+        synchronized PreparedStatement getStatement() throws SQLException {
+            PreparedStatement preparedStatement = null;
+            while (preparedStatement == null || preparedStatement.isClosed()) {
+                if (availableStatements.isEmpty()){
+                    preparedStatement = mySQLPool.retrieve().prepareStatement(this.query);
+                } else {
+                    preparedStatement = availableStatements.removeFirst();
+                }
             }
             return preparedStatement;
         }
 
-        private PreparedStatement generatePreparedStatement() throws SQLException {
-            return getConnection().prepareStatement(this.query);
+        synchronized void putback(PreparedStatement preparedStatement) {
+            try {
+                if (preparedStatement != null && !preparedStatement.isClosed()) {
+                    availableStatements.addLast(preparedStatement);
+                }
+            } catch (SQLException e){
+                //
+            }
         }
     }
 }

@@ -49,7 +49,7 @@ public class MyServiceEntityDelete extends MyServiceEntityAction {
                 return threadPool.addWork(() -> {
                     ResultOfReplicaAnswer result = new ResultOfReplicaAnswer(myReplicaHost);
                     try {
-                        HttpQuery deleteHttpQuery = HttpQuery.Delete(sameQueryOnReplica(replicaHost));
+                        HttpQuery deleteHttpQuery = httpQueryCreator.delete(sameQueryOnReplica(replicaHost));
 
                         deleteHttpQuery.addReplicasToRequest(new ListOfReplicas(myReplicaHost));
                         deleteHttpQuery.addTimestamp(timestamp);
@@ -60,6 +60,8 @@ public class MyServiceEntityDelete extends MyServiceEntityAction {
                         if (httpQueryResult.getStatusCode() == HttpHelpers.STATUS_SUCCESS_DELETE) {
                             result.successOperation();
                         }
+
+                        httpQueryResult.close();
 
                     } catch (URISyntaxException e) {
                         e.printStackTrace();

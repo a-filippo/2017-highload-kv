@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 
 import com.sun.net.httpserver.HttpExchange;
 
+import ru.mail.polis.httpclient.HttpQueryCreator;
 import ru.mail.polis.replicahelpers.ListOfReplicas;
 import ru.mail.polis.dao.DAO;
 
@@ -22,7 +23,20 @@ public class MyServiceParameters {
     private ListOfReplicas replicasHosts;
 
     @NotNull
+    private HttpQueryCreator httpQueryCreator;
+
+    @NotNull
     private ThreadPoolReplicasQuerys threadPool;
+
+    @NotNull
+    public HttpQueryCreator getHttpQueryCreator() {
+        return httpQueryCreator;
+    }
+
+    public MyServiceParameters setHttpQueryCreator(@NotNull HttpQueryCreator httpQueryCreator) {
+        this.httpQueryCreator = httpQueryCreator;
+        return this;
+    }
 
     @NotNull
     public ListOfReplicas getReplicasHosts() {

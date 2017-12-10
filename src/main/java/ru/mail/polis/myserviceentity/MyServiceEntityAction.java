@@ -21,6 +21,7 @@ import com.sun.net.httpserver.HttpExchange;
 import ru.mail.polis.HttpHelpers;
 import ru.mail.polis.IOHelpers;
 import ru.mail.polis.IllegalIdException;
+import ru.mail.polis.httpclient.HttpQueryCreator;
 import ru.mail.polis.replicahelpers.ListOfReplicas;
 import ru.mail.polis.MyService;
 import ru.mail.polis.replicahelpers.ReplicaParameters;
@@ -57,6 +58,9 @@ abstract public class MyServiceEntityAction {
     @NotNull
     protected final ListOfReplicas fromReplicas;
 
+    @NotNull
+    protected final HttpQueryCreator httpQueryCreator;
+
     public MyServiceEntityAction(@NotNull MyServiceParameters myServiceParameters) throws ReplicaParametersException, IllegalIdException {
         this.myServiceParameters = myServiceParameters;
 
@@ -65,6 +69,7 @@ abstract public class MyServiceEntityAction {
         this.httpExchange = myServiceParameters.getHttpExchange();
         this.replicasHosts = myServiceParameters.getReplicasHosts();
         this.threadPool = myServiceParameters.getThreadPool();
+        this.httpQueryCreator = myServiceParameters.getHttpQueryCreator();
 
         ServiceQueryParameters serviceQueryParameters = new ServiceQueryParameters(httpExchange.getRequestURI().getQuery());
         this.replicaParameters = serviceQueryParameters.getReplicaParameters(replicasHosts.size() + 1);

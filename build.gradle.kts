@@ -14,7 +14,7 @@ dependencies {
     // Annotations for better code documentation
     compile("com.intellij:annotations:12.0")
     
-    compile("org.apache.derby:derby:10.13.1.1")
+    compile("org.apache.derby:derby:10.14.1.0")
 
     compile("org.apache.commons:commons-lang3:3.3")
 

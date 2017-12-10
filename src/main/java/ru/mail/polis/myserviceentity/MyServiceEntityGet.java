@@ -89,7 +89,7 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
                     ResultOfReplicaAnswer result = new ResultOfReplicaAnswer(replicaHost);
 
                     try {
-                        HttpQuery httpQuery = HttpQuery.Get(sameQueryOnReplica(replicaHost));
+                        HttpQuery httpQuery = httpQueryCreator.get(sameQueryOnReplica(replicaHost));
 
                         httpQuery.addReplicasToRequest(new ListOfReplicas(myReplicaHost));
                         httpQuery.addHeader(HttpHelpers.HEADER_GET_INFO, HttpHelpers.HEADER_GET_INFO_VALUE);
@@ -115,6 +115,7 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
                                 result.setValueTimestamp(timestamp);
                                 break;
                         }
+                        headQueryResult.close();
                     } catch (URISyntaxException e) {
                         e.printStackTrace();
                     } catch (HttpHostConnectException | ConnectTimeoutException e){
@@ -188,7 +189,7 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
 
     private void sendValueFromReplica(String[] replicas, int numberOfReplica) throws IOException {
         try {
-            HttpQuery getHttpQuery = HttpQuery.Get(sameQueryOnReplica(replicas[numberOfReplica]));
+            HttpQuery getHttpQuery = httpQueryCreator.get(sameQueryOnReplica(replicas[numberOfReplica]));
             getHttpQuery.addReplicasToRequest(new ListOfReplicas(myReplicaHost));
 
             HttpQueryResult getValueResult = getHttpQuery.execute();
@@ -200,6 +201,7 @@ public class MyServiceEntityGet extends MyServiceEntityAction{
                     sendResponse(HttpHelpers.STATUS_SUCCESS_GET, getValueResult.getSizeFromHeader(), getValueResult.getInputStream());
                     break;
             }
+            getValueResult.close();
         } catch (URISyntaxException e) {
             e.printStackTrace();
             throw new IOException();
