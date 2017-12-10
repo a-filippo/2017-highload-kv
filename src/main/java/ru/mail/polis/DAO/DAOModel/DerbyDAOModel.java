@@ -10,6 +10,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import javax.sql.ConnectionPoolDataSource;
+import javax.sql.PooledConnection;
+
+import org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,13 +21,16 @@ import ru.mail.polis.IOHelpers;
 
 public class DerbyDAOModel implements DAOModel {
     private final String DB_URL;
-    private final String DB_CONNECTION_URL;
+//    private final String DB_CONNECTION_URL;
     private static final String TABLE_STORAGE = "STORAGE";
     private static final String COL_KEY = "storage_key";
     private static final String COL_VALUE = "storage_value";
     private static final String COL_PATH = "storage_path";
     private static final String COL_TIMESTAMP = "storage_timestamp";
     private static final String COL_SIZE = "storage_value_size";
+
+    private EmbeddedConnectionPoolDataSource connectionPoolDataSource;
+    private PooledConnection pooledConnection;
 
     private PreparedStatementStore getRowPreparedStatementStore;
     private PreparedStatementStore updateRowPreparedStatementStore;
@@ -40,15 +47,30 @@ public class DerbyDAOModel implements DAOModel {
         }
 
         DB_URL = dbPath + File.separator + folderOfDatabase;
-        DB_CONNECTION_URL = "jdbc:derby:" + DB_URL + ";create=true";
+//        DB_CONNECTION_URL = "jdbc:derby:" + DB_URL + ";create=true";
+
+
+        this.connectionPoolDataSource = new EmbeddedConnectionPoolDataSource();
+        this.connectionPoolDataSource.setDatabaseName(DB_URL);
+        this.connectionPoolDataSource.setCreateDatabase("create");
+
+        this.pooledConnection = connectionPoolDataSource.getPooledConnection();
+
         createTable();
         prepareStatements();
+
+
     }
 
     @Override
     public void stop() throws IOException {
         try {
-            DriverManager.getConnection("jdbc:derby:" + DB_URL + ";shutdown=true");
+            this.connectionPoolDataSource = new EmbeddedConnectionPoolDataSource();
+            this.connectionPoolDataSource.setDatabaseName(DB_URL);
+            this.connectionPoolDataSource.setShutdownDatabase("shutdown");
+            this.pooledConnection = connectionPoolDataSource.getPooledConnection();
+
+            //            DriverManager.getConnection("jdbc:derby:" + DB_URL + ";shutdown=true");
         } catch (SQLException e){
             String state = e.getSQLState();
             // 08006 connection with db closed
@@ -74,8 +96,9 @@ public class DerbyDAOModel implements DAOModel {
         return folderOfDatabase;
     }
 
-    private Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(DB_CONNECTION_URL);
+    private synchronized Connection getConnection() throws SQLException {
+//        return DriverManager.getConnection(DB_CONNECTION_URL);
+        return pooledConnection.getConnection();
     }
 
     private void createTable() throws SQLException {
@@ -107,8 +130,9 @@ public class DerbyDAOModel implements DAOModel {
     @Nullable
     @Override
     public DAOModelValue getValue(@NotNull String key) throws IOException{
-        try {
-            PreparedStatement preparedStatement = getRowPreparedStatementStore.getStatement();
+        try (Connection connection = getConnection();
+            PreparedStatement preparedStatement = getRowPreparedStatementStore.getStatement(connection)
+        ){
             preparedStatement.setString(1, key);
             ResultSet rs = preparedStatement.executeQuery();
 
@@ -132,8 +156,9 @@ public class DerbyDAOModel implements DAOModel {
     @Nullable
     @Override
     public String getPath(@NotNull String key) throws IOException {
-        try {
-            PreparedStatement preparedStatement = getPathRowPreparedStatementStore.getStatement();
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = getPathRowPreparedStatementStore.getStatement(connection)
+        ){
             preparedStatement.setString(1, key);
             ResultSet rs = preparedStatement.executeQuery();
             String path = rs.next() ? rs.getString(COL_PATH) : null;
@@ -148,9 +173,12 @@ public class DerbyDAOModel implements DAOModel {
 
     @Override
     public void putValue(@NotNull DAOModelValue value, boolean issetInStore) throws IOException {
-        try {
-            PreparedStatementStore preparedStatementStore = issetInStore ? updateRowPreparedStatementStore : insertRowPreparedStatementStore;
-            PreparedStatement preparedStatement = preparedStatementStore.getStatement();
+        PreparedStatementStore preparedStatementStore = issetInStore ? updateRowPreparedStatementStore : insertRowPreparedStatementStore;
+
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = preparedStatementStore.getStatement(connection)
+        ){
+            preparedStatement.setPoolable(true);
             preparedStatement.setBytes(1, value.getValue());
             preparedStatement.setInt(2, value.getSize());
             preparedStatement.setLong(3, value.getTimestamp());
@@ -165,8 +193,9 @@ public class DerbyDAOModel implements DAOModel {
 
     @Override
     public void deleteValue(@NotNull String key, long deleteTimestamp) throws IOException{
-        try {
-            PreparedStatement preparedStatement = updateRowPreparedStatementStore.getStatement();
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = updateRowPreparedStatementStore.getStatement(connection)
+        ){
             preparedStatement.setBytes(1, new byte[0]);
             preparedStatement.setInt(2, -1);
             preparedStatement.setLong(3, deleteTimestamp);
@@ -226,15 +255,16 @@ public class DerbyDAOModel implements DAOModel {
             this.query = query;
         }
 
-        PreparedStatement getStatement() throws SQLException {
-            if (preparedStatement == null || preparedStatement.isClosed()){
-                preparedStatement = generatePreparedStatement();
-            }
-            return preparedStatement;
+        PreparedStatement getStatement(Connection connection) throws SQLException {
+//            if (preparedStatement == null || preparedStatement.isClosed()){
+//                preparedStatement = generatePreparedStatement();
+//            }
+//            return preparedStatement;
+            return generatePreparedStatement(connection);
         }
 
-        private PreparedStatement generatePreparedStatement() throws SQLException {
-            return getConnection().prepareStatement(this.query);
+        private PreparedStatement generatePreparedStatement(Connection connection) throws SQLException {
+            return connection.prepareStatement(this.query);
         }
     }
 }
