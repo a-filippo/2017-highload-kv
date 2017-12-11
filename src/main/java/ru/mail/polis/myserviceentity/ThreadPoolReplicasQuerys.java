@@ -11,7 +11,7 @@ public class ThreadPoolReplicasQuerys {
     private ExecutorService executor;
 
     public void start(){
-        executor = Executors.newFixedThreadPool(1000);
+        executor = Executors.newFixedThreadPool(8 * 3);
     }
 
     public void stop(){

@@ -47,9 +47,8 @@ public class MyServiceEntityPut extends MyServiceEntityAction {
             );
 
         ResultsOfReplicasAnswer results = forEachNeedingReplica(replicaHost -> {
-
-            if (replicaHost.equals(myReplicaHost)) {
-                return threadPool.addWork(() -> {
+            return threadPool.addWork(() -> {
+                if (replicaHost.equals(myReplicaHost)) {
                     ResultOfReplicaAnswer result = new ResultOfReplicaAnswer(myReplicaHost);
 
                     DAOValue value = new DAOValue(temporaryValueStorage.getInputStream(), size, timestamp);
@@ -58,11 +57,7 @@ public class MyServiceEntityPut extends MyServiceEntityAction {
                     result.workingReplica();
                     result.successOperation();
                     return result;
-                });
-
-            } else {
-
-                return threadPool.addWork(() -> {
+                } else {
                     ResultOfReplicaAnswer result = new ResultOfReplicaAnswer(myReplicaHost);
 
                     try {
@@ -91,8 +86,8 @@ public class MyServiceEntityPut extends MyServiceEntityAction {
                     }
 
                     return result;
-                });
-            }
+                }
+            });
         });
 
         temporaryValueStorage.close();

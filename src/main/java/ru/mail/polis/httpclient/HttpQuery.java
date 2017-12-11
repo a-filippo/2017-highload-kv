@@ -11,10 +11,10 @@ import ru.mail.polis.HttpHelpers;
 import ru.mail.polis.replicahelpers.ListOfReplicas;
 
 public class HttpQuery {
-    private MyHttpClientPool clientPool;
+    private MyHttpClientCreator clientPool;
     private HttpRequestBase request;
 
-    HttpQuery(HttpRequestBase request, MyHttpClientPool clientPool) {
+    HttpQuery(HttpRequestBase request, MyHttpClientCreator clientPool) {
         this.request = request;
         this.clientPool = clientPool;
     }

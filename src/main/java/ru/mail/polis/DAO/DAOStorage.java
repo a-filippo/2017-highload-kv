@@ -16,7 +16,7 @@ import org.jetbrains.annotations.NotNull;
 import ru.mail.polis.IOHelpers;
 import ru.mail.polis.dao.daomodel.DAOModel;
 import ru.mail.polis.dao.daomodel.DAOModelValue;
-import ru.mail.polis.dao.daomodel.DerbyDAOModel;
+import ru.mail.polis.dao.daomodel.H2DAOModel;
 
 public class DAOStorage implements DAO {
     public static final String HARD_STORAGE_FOLDER = "storage";
@@ -37,7 +37,7 @@ public class DAOStorage implements DAO {
         DB_FULL_PATH = rootPath + File.separator + DB_PATH;
 
         try {
-            modelValues = new DerbyDAOModel(DB_FULL_PATH);
+            modelValues = new H2DAOModel(DB_FULL_PATH);
         } catch (SQLException e){
             e.printStackTrace();
             throw new IOException();

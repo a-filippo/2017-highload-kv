@@ -43,7 +43,7 @@ public class MyService implements KVService {
 
     public MyService(int port, @NotNull DAO dao, Set<String> replicas) throws IOException {
         this.httpServer = HttpServer.create(new InetSocketAddress(port), 0);
-        this.httpServer.setExecutor(Executors.newFixedThreadPool(50));
+        this.httpServer.setExecutor(Executors.newFixedThreadPool(8));
 
         this.dao = dao;
 
@@ -83,6 +83,10 @@ public class MyService implements KVService {
                         case "GET":
                             MyServiceEntityGet myServiceEntityGet = new MyServiceEntityGet(myServiceParameters);
                             myServiceEntityGet.execute();
+                            if (httpExchange.getResponseCode() >= 400){
+                                System.out.println(httpExchange.getResponseCode());
+                                System.out.println(httpExchange.getResponseHeaders());
+                            }
                             break;
 
                         case "PUT":
@@ -104,6 +108,7 @@ public class MyService implements KVService {
                     httpExchange.sendResponseHeaders(HttpHelpers.STATUS_BAD_ARGUMENT, 0);
                     httpExchange.getResponseBody().close();
                     httpExchange.close();
+                    e.printStackTrace();
                 } catch (IOException e) {
                     httpExchange.sendResponseHeaders(HttpHelpers.STATUS_INTERNAL_ERROR, 0);
                     httpExchange.getResponseBody().close();

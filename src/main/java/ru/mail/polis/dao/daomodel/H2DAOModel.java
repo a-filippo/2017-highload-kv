@@ -1,26 +1,21 @@
 package ru.mail.polis.dao.daomodel;
 
-import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.LinkedList;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
-import org.apache.derby.jdbc.EmbeddedDataSource;
+import org.h2.jdbcx.JdbcDataSource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import ru.mail.polis.IOHelpers;
-
-public class DerbyDAOModel implements DAOModel {
-    private final String DB_URL;
-
-    private MySQLPool mySQLPool;
+public class H2DAOModel implements DAOModel {
+    private DBConnectionPool connectionPool;
 
     private static final String TABLE_STORAGE = "STORAGE";
     private static final String COL_KEY = "storage_key";
@@ -34,22 +29,17 @@ public class DerbyDAOModel implements DAOModel {
     private PreparedStatementStore insertRowPreparedStatementStore;
     private PreparedStatementStore getPathRowPreparedStatementStore;
 
-    public DerbyDAOModel(String dbPath) throws SQLException {
-        String folderOfDatabase;
+    public H2DAOModel(String dbPath) throws SQLException {
         try {
-            folderOfDatabase = createDatabaseFolderIfNeeding(dbPath);
-        } catch (IOException e){
-            e.printStackTrace();
-            throw new SQLException("Error of creating tables");
+            Class.forName("org.h2.Driver");
+        } catch (ClassNotFoundException e){
+            throw new SQLException();
         }
 
-        DB_URL = dbPath + File.separator + folderOfDatabase;
+        JdbcDataSource ds = new JdbcDataSource();
+        ds.setURL("jdbc:h2:" + dbPath + "");
 
-        EmbeddedDataSource dataSource = new EmbeddedDataSource();
-        dataSource.setDatabaseName(DB_URL);
-        dataSource.setCreateDatabase("create");
-
-        mySQLPool = new MySQLPool(dataSource);
+        connectionPool = new DBConnectionPool(ds);
 
         createTable();
         prepareStatements();
@@ -58,7 +48,7 @@ public class DerbyDAOModel implements DAOModel {
     @Override
     public void stop() throws IOException {
         try {
-            DriverManager.getConnection("jdbc:derby:" + DB_URL + ";shutdown=true");
+            connectionPool.retrieve().createStatement().execute("SHUTDOWN");
         } catch (SQLException e){
             String state = e.getSQLState();
             // 08006 connection with db closed
@@ -71,26 +61,12 @@ public class DerbyDAOModel implements DAOModel {
         }
     }
 
-    private String createDatabaseFolderIfNeeding(String dbPath) throws IOException{
-        IOHelpers.createDirIfNoExists(dbPath);
-        File dir = new File(dbPath);
-        String[] files = dir.list();
-        String folderOfDatabase;
-        if (files.length == 0){
-            folderOfDatabase = String.valueOf(System.currentTimeMillis());
-        } else {
-            folderOfDatabase = files[0];
-        }
-        return folderOfDatabase;
-    }
-
     private void createTable() throws SQLException {
-        Connection connection = mySQLPool.retrieve();
-
+        Connection connection = connectionPool.retrieve();
 
         DatabaseMetaData databaseMetaData = connection.getMetaData();
 
-        ResultSet resultSet = databaseMetaData.getTables(null, "APP", TABLE_STORAGE, null);
+        ResultSet resultSet = databaseMetaData.getTables(null, null, TABLE_STORAGE, null);
         if (!resultSet.next()){
             Statement statement = connection.createStatement();
             statement.execute(
@@ -107,7 +83,7 @@ public class DerbyDAOModel implements DAOModel {
             statement.close();
         }
 
-        mySQLPool.putback(connection);
+        connectionPool.putback(connection);
     }
 
     @Nullable
@@ -241,30 +217,32 @@ public class DerbyDAOModel implements DAOModel {
     }
 
     private class PreparedStatementStore{
-        private LinkedList<PreparedStatement> availableStatements;
+        private Queue<PreparedStatement> availableStatements;
         private String query;
 
-        PreparedStatementStore(String query){
+        PreparedStatementStore(String query) throws SQLException {
             this.query = query;
-            this.availableStatements = new LinkedList<>();
+            this.availableStatements = new ConcurrentLinkedQueue<>();
         }
 
-        synchronized PreparedStatement getStatement() throws SQLException {
+        private PreparedStatement getPreparedStatement() throws SQLException {
+            return connectionPool.retrieve().prepareStatement(this.query);
+        }
+
+        PreparedStatement getStatement() throws SQLException {
             PreparedStatement preparedStatement = null;
             while (preparedStatement == null || preparedStatement.isClosed()) {
-                if (availableStatements.isEmpty()){
-                    preparedStatement = mySQLPool.retrieve().prepareStatement(this.query);
-                } else {
-                    preparedStatement = availableStatements.removeFirst();
+                if ((preparedStatement = availableStatements.poll()) == null){
+                    preparedStatement = getPreparedStatement();
                 }
             }
             return preparedStatement;
         }
 
-        synchronized void putback(PreparedStatement preparedStatement) {
+        void putback(PreparedStatement preparedStatement) {
             try {
                 if (preparedStatement != null && !preparedStatement.isClosed()) {
-                    availableStatements.addLast(preparedStatement);
+                    availableStatements.add(preparedStatement);
                 }
             } catch (SQLException e){
                 //

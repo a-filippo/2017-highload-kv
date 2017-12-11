@@ -136,16 +136,15 @@ abstract public class MyServiceEntityAction {
     }
 
     protected ResultsOfReplicasAnswer forEachNeedingReplica(ForEachReplicaInQueryFromClient forEachReplica) throws IOException {
-        List<Future<ResultOfReplicaAnswer>> futures = new ArrayList<>();
-        List<String> listOfReplicasForRequest = findReplicas(id);
-
         int from = replicaParameters.from();
+
+        List<Future<ResultOfReplicaAnswer>> futures = new ArrayList<>(from);
+        List<String> listOfReplicasForRequest = findReplicas(id);
+        List<ResultOfReplicaAnswer> listOfResults = new ArrayList<>(from);
 
         for (int i = 0; i < from; i++) {
             futures.add(forEachReplica.execute(listOfReplicasForRequest.get(i)));
         }
-
-        List<ResultOfReplicaAnswer> listOfResults = new ArrayList<>();
 
         for (Future<ResultOfReplicaAnswer> future : futures){
             try {

@@ -10,7 +10,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 
-public class MyHttpClientPool {
+public class MyHttpClientCreator {
     private static final int TIMEOUT = 700;
     private static final int MAX_TOTAL = 400;
     private static final int MAX_PER_ROUTE = 100;

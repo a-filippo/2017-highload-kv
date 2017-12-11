@@ -8,14 +8,14 @@ import javax.sql.DataSource;
 
 import org.jetbrains.annotations.Nullable;
 
-public class MySQLPool {
+public class DBConnectionPool {
     private DataSource dataSource;
 
     private Vector<Connection> availableConns;
 
-    MySQLPool(DataSource dataSource) throws SQLException {
-        this.availableConns = new Vector<>();
+    DBConnectionPool(DataSource dataSource) throws SQLException {
         this.dataSource = dataSource;
+        this.availableConns = new Vector<>();
     }
 
     private Connection getConnection() throws SQLException {

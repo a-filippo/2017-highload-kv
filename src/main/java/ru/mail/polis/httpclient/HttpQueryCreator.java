@@ -8,32 +8,32 @@ import org.apache.http.client.methods.HttpPut;
 import org.jetbrains.annotations.NotNull;
 
 public class HttpQueryCreator {
-    private MyHttpClientPool myHttpClientPool;
+    private MyHttpClientCreator myHttpClientCreator;
 
     public HttpQueryCreator() {
-        myHttpClientPool = new MyHttpClientPool();
+        myHttpClientCreator = new MyHttpClientCreator();
     }
 
     @NotNull
     public HttpQuery put(URI uri){
-        return new HttpQuery(new HttpPut(uri), myHttpClientPool);
+        return new HttpQuery(new HttpPut(uri), myHttpClientCreator);
     }
 
     @NotNull
     public HttpQuery get(URI uri){
-        return new HttpQuery(new HttpGet(uri), myHttpClientPool);
+        return new HttpQuery(new HttpGet(uri), myHttpClientCreator);
     }
 
     @NotNull
     public HttpQuery delete(URI uri){
-        return new HttpQuery(new HttpDelete(uri), myHttpClientPool);
+        return new HttpQuery(new HttpDelete(uri), myHttpClientCreator);
     }
 
     public void stop() {
-        myHttpClientPool.stop();
+        myHttpClientCreator.stop();
     }
 
     public void start() {
-        myHttpClientPool.start();
+        myHttpClientCreator.start();
     }
 }
