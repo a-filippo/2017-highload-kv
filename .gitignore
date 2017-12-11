@@ -11,6 +11,8 @@
 !gradlew
 !LICENSE
 !README.md
+!LOADTEST.md
+!results/*.svg
 !settings.gradle
 
 # ...even if they are in subdirectories
